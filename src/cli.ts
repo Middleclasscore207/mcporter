@@ -387,26 +387,17 @@ async function handleList(runtime: Awaited<ReturnType<typeof createRuntime>>, ar
     return;
   }
 
+  const definition = runtime.getDefinition(target);
+  const sourcePath = formatSourceSuffix(definition.source, true);
+  console.log(`- ${target}`);
+  if (sourcePath) {
+    console.log(`  Source: ${sourcePath}`);
+  }
   try {
-    const definition = runtime.getDefinition(target);
-    const sourcePath = formatSourceSuffix(definition.source, true);
-    const tools = await withTimeout(
-      runtime.listTools(target, {
-        includeSchema: flags.schema,
-      }),
-      LIST_TIMEOUT_MS
-    );
+    const tools = await withTimeout(runtime.listTools(target, { includeSchema: flags.schema }), LIST_TIMEOUT_MS);
     if (tools.length === 0) {
-      console.log(`- ${target}`);
-      if (sourcePath) {
-        console.log(`  Source: ${sourcePath}`);
-      }
       console.log('  Tools: <none>');
       return;
-    }
-    console.log(`- ${target}`);
-    if (sourcePath) {
-      console.log(`  Source: ${sourcePath}`);
     }
     console.log('  Tools:');
     for (const tool of tools) {
