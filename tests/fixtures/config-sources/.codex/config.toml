@@ -1,0 +1,10 @@
+[mcp_servers]
+[mcp_servers.shared]
+url = "https://codex.local/mcp"
+bearer_token_env = "CODEX_TOKEN"
+headers = { "X-Custom" = "codex" }
+
+[mcp_servers.codex-only]
+command = "codex-cli"
+args = ["--run"]
+headers = { "X-Custom" = "codex" }

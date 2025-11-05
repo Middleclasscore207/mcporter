@@ -203,9 +203,9 @@ export function createServerProxy(
 					if (isPlainObject(arg)) {
 						const keys = Object.keys(arg);
 						const treatAsArgs =
-							schemaInfo &&
+							schemaInfo !== undefined &&
 							keys.length > 0 &&
-							keys.every((key) => schemaInfo!.propertySet.has(key));
+							keys.every((key) => schemaInfo.propertySet.has(key));
 
 						if (treatAsArgs) {
 							Object.assign(argsAccumulator, arg as Record<string, unknown>);
@@ -228,7 +228,9 @@ export function createServerProxy(
 				let combinedArgs: ToolArguments | undefined = explicitArgs;
 
 				if (schemaInfo) {
-					if (positional.length > schemaInfo.orderedKeys.length) {
+					const schema = schemaInfo;
+
+					if (positional.length > schema.orderedKeys.length) {
 						throw new Error(
 							`Too many positional arguments for tool "${toolName}"`,
 						);
@@ -239,7 +241,7 @@ export function createServerProxy(
 							? { ...(combinedArgs as Record<string, unknown>) }
 							: {};
 						positional.forEach((value, idx) => {
-							const key = schemaInfo!.orderedKeys[idx];
+							const key = schema.orderedKeys[idx];
 							if (key) {
 								baseArgs[key] = value;
 							}
@@ -256,16 +258,16 @@ export function createServerProxy(
 					}
 
 					if (combinedArgs !== undefined) {
-						combinedArgs = applyDefaults(schemaInfo, combinedArgs);
+						combinedArgs = applyDefaults(schema, combinedArgs);
 						finalOptions.args = combinedArgs;
 					} else {
-						const defaults = applyDefaults(schemaInfo, undefined);
+						const defaults = applyDefaults(schema, undefined);
 						if (isPlainObject(defaults) && Object.keys(defaults).length > 0) {
 							finalOptions.args = defaults;
 						}
 					}
 
-					validateRequired(schemaInfo, finalOptions.args as ToolArguments);
+					validateRequired(schema, finalOptions.args as ToolArguments);
 				} else {
 					if (positional.length > 0 && combinedArgs === undefined) {
 						combinedArgs = (

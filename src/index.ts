@@ -1,4 +1,10 @@
-export type { CommandSpec, ServerDefinition } from "./config.js";
+export type {
+	CommandSpec,
+	ConfigSourceDefinition,
+	ConfigSourceKind,
+	MergeStrategy,
+	ServerDefinition,
+} from "./config.js";
 export { loadServerDefinitions } from "./config.js";
 export type { CallResult } from "./result-utils.js";
 export { createCallResult } from "./result-utils.js";
@@ -11,4 +17,3 @@ export type {
 } from "./runtime.js";
 export { callOnce, createRuntime } from "./runtime.js";
 export { createServerProxy } from "./server-proxy.js";
-export { createContext7Client } from "./context7-client.js";

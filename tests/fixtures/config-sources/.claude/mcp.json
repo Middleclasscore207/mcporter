@@ -1,0 +1,10 @@
+{
+	"mcpServers": {
+		"claude-only": {
+			"command": ["python", "-m", "claude_tool"],
+			"env": {
+				"CLAUDE_MODE": "local"
+			}
+		}
+	}
+}

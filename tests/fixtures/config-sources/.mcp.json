@@ -1,0 +1,17 @@
+{
+	"mcpServers": {
+		"shared": {
+			"baseUrl": "https://project.local/mcp",
+			"headers": {
+				"Authorization": "Bearer project"
+			}
+		},
+		"project-only": {
+			"command": "npx",
+			"args": ["project-cli"],
+			"env": {
+				"PROJECT_ENV": "development"
+			}
+		}
+	}
+}

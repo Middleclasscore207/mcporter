@@ -182,30 +182,61 @@ await firecrawl.firecrawlScrape(
 
 You can still drop down to `context7.call("resolve-library-id", { args: { ... } })` when you need explicit control.
 
-### High-level helpers
+### Compose higher-level flows
 
-You can compose higher-level helpers yourself with plain JavaScript. Because the proxy already maps positional arguments to schema fields, a tiny wrapper is enough to resolve a Context7 library ID and fetch the docs:
+Because the proxy already maps positional arguments to schema fields, you can layer custom helpers with plain JavaScript:
 
 ```ts
 const context7 = createServerProxy(mcpRuntime, "context7");
 
-async function getContext7Docs(libraryName: string) {
-	const resolution = await context7.resolveLibraryId(libraryName);
+async function getDocs(libraryName: string) {
+	const resolved = await context7.resolveLibraryId(libraryName);
 	const id =
-		resolution.json<{ candidates?: Array<{ context7CompatibleLibraryID?: string }> }>()
+		resolved
+			.json<{ candidates?: Array<{ context7CompatibleLibraryID?: string }> }>()
 			?.candidates?.find((candidate) => candidate?.context7CompatibleLibraryID)
 			?.context7CompatibleLibraryID ??
-		resolution
-			.text()
-			?.match(/Context7-compatible library ID:\s*([^\s]+)/)?.[1];
+		resolved.text()?.match(/Context7-compatible library ID:\s*([^\s]+)/)?.[1];
 	if (!id) {
 		throw new Error(`Context7 library "${libraryName}" not found.`);
 	}
 	return context7.getLibraryDocs(id);
 }
+
+const docs = await getDocs("react");
+console.log(docs.markdown());
 ```
 
-The returned value is still a `CallResult`, so you can opt into `.markdown()`, `.json()`, etc.
+The return value is still a `CallResult`, so you retain `.text()`, `.markdown()`, `.json()`, and friends.
+
+## Configuration sources
+
+`createRuntime()` automatically merges MCP definitions from several tools (first match wins by default):
+
+1. `config/mcp_servers.json`
+2. Project `.mcp.json`
+3. Project `.cursor/mcp.json`
+4. Project `.claude/mcp.json`
+5. Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS, `%APPDATA%/Claude/claude_desktop_config.json` on Windows).
+6. Cursor user config (`~/.cursor/mcp.json` on macOS/Linux, `%APPDATA%/Cursor/mcp.json` on Windows).
+7. Claude Code global config (`~/.claude.json`; legacy installs sometimes use `~/.claude/mcp.json`).
+8. Codex CLI config (`~/.codex/config.toml`).
+
+Add `config/mcp_sources.json` to change the order or switch to “last source wins” merging:
+
+```jsonc
+{
+	"strategy": "last-wins",
+	"sources": [
+		{ "kind": "local-json" },                 // config/mcp_servers.json
+		{ "kind": "project-mcp-json", "optional": true },
+		{ "kind": "cursor-project", "optional": true },
+		{ "kind": "codex", "optional": true }
+	]
+}
+```
+
+Every source accepts an optional `path` if you keep configs elsewhere (use `~` for home expansion). Prefer declarative configuration, but you can also pass `configSources` / `strategy` directly to `createRuntime()` when you need per-script overrides.
 
 ## Testing & CI
 

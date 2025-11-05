@@ -1,0 +1,17 @@
+{
+	"mcpServers": {
+		"shared": {
+			"baseUrl": "https://cursor.local/mcp",
+			"headers": {
+				"Authorization": "Bearer cursor"
+			}
+		},
+		"cursor-only": {
+			"command": "cursor-cli",
+			"args": ["--flag"],
+			"env": {
+				"CURSOR_FLAG": "1"
+			}
+		}
+	}
+}

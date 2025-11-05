@@ -43,6 +43,12 @@ summary: 'Plan for the mcp-runtime package replacing the Sweetistics pnpm MCP he
 - Encourage lightweight composition helpers in examples (e.g., resolving then fetching Context7 docs) while keeping library exports generic.
 - Back the proxy with targeted unit tests that cover primitive-only calls, positional tuples + option bags, and error fallbacks when schemas are missing.
 
+## Configuration Sources
+- Merge definitions from repo `config/mcp_servers.json`, project `.mcp.json`, project/local Cursor (`.cursor/mcp.json`) and Claude (`.claude/mcp.json`) files, user-level Cursor (`~/.cursor/mcp.json`), Claude (`~/.claude.json` or `~/.claude/mcp.json`), Claude Desktop (`claude_desktop_config.json` in OS-specific app data), and Codex (`~/.codex/config.toml`).
+- Default merge strategy is first-wins; allow `last-wins` when requested (config file or runtime option).
+- Support `config/mcp_sources.json` with `{ "strategy": "...", "sources": [...] }` to customize order/paths and expose equivalent programmatic overrides via `loadServerDefinitions`.
+- Normalize JSON/TOML shapes into shared `ServerDefinition` objects without leaking tool-specific quirks; add fixture-driven tests to lock behavior down.
+
 ## Work Phases
 1. **Scaffold Package**
    - Init pnpm workspace config, tsconfig, lint/test scaffolding, build script.

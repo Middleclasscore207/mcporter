@@ -123,6 +123,9 @@ describe("mcp-runtime composability", () => {
 			.mockResolvedValueOnce({ ok: "first" })
 			.mockResolvedValueOnce({ ok: "second" });
 
+		const previousToken = process.env.INLINE_TOKEN;
+		process.env.INLINE_TOKEN = "inline-test";
+
 		const runtime = await createRuntime({
 			servers: [
 				{
@@ -131,57 +134,66 @@ describe("mcp-runtime composability", () => {
 					command: {
 						kind: "http" as const,
 						url: new URL("https://example.com"),
-						headers: { Authorization: "Bearer inline-test" },
+						headers: { Authorization: `Bearer \${INLINE_TOKEN}` },
 					},
 				},
 			],
 		});
 
-		const tools = await runtime.listTools("fake");
-		expect(tools).toEqual([
-			{
-				name: "echo",
-				description: "Echo tool",
-				inputSchema: undefined,
-				outputSchema: undefined,
-			},
-		]);
-		expect(mocks.connectMock).toHaveBeenCalledTimes(1);
-		expect(mocks.clientInstances).toHaveLength(1);
-		const streamableTransport = mocks.streamableInstances[0] as {
-			options?: {
-				requestInit?: { headers?: Record<string, string> };
-				authProvider?: unknown;
+		try {
+			const tools = await runtime.listTools("fake");
+			expect(tools).toEqual([
+				{
+					name: "echo",
+					description: "Echo tool",
+					inputSchema: undefined,
+					outputSchema: undefined,
+				},
+			]);
+			expect(mocks.connectMock).toHaveBeenCalledTimes(1);
+			expect(mocks.clientInstances).toHaveLength(1);
+			const streamableTransport = mocks.streamableInstances[0] as {
+				options?: {
+					requestInit?: { headers?: Record<string, string> };
+					authProvider?: unknown;
+				};
+				close: ReturnType<typeof vi.fn>;
 			};
-			close: ReturnType<typeof vi.fn>;
-		};
-		expect(streamableTransport.options?.requestInit?.headers).toEqual({
-			Authorization: "Bearer inline-test",
-		});
+			expect(streamableTransport.options?.requestInit?.headers).toEqual({
+				Authorization: "Bearer inline-test",
+			});
 
-		const first = await runtime.callTool("fake", "echo", {
-			args: { text: "hi" },
-		});
-		const second = await runtime.callTool("fake", "echoSecond", {
-			args: { count: 2 },
-		});
+			const first = await runtime.callTool("fake", "echo", {
+				args: { text: "hi" },
+			});
+			const second = await runtime.callTool("fake", "echoSecond", {
+				args: { count: 2 },
+			});
 
-		expect(first).toEqual({ ok: "first" });
-		expect(second).toEqual({ ok: "second" });
-		expect(mocks.callToolMock).toHaveBeenNthCalledWith(1, {
-			name: "echo",
-			arguments: { text: "hi" },
-		});
-		expect(mocks.callToolMock).toHaveBeenNthCalledWith(2, {
-			name: "echoSecond",
-			arguments: { count: 2 },
-		});
-		expect(mocks.connectMock).toHaveBeenCalledTimes(1);
-		expect(mocks.clientInstances).toHaveLength(1);
-
-		await runtime.close();
-
-		expect(mocks.streamableInstances).toHaveLength(1);
-		expect(streamableTransport.close).toHaveBeenCalledTimes(1);
+			expect(first).toEqual({ ok: "first" });
+			expect(second).toEqual({ ok: "second" });
+			expect(mocks.callToolMock).toHaveBeenNthCalledWith(1, {
+				name: "echo",
+				arguments: { text: "hi" },
+			});
+			expect(mocks.callToolMock).toHaveBeenNthCalledWith(2, {
+				name: "echoSecond",
+				arguments: { count: 2 },
+			});
+			expect(mocks.connectMock).toHaveBeenCalledTimes(1);
+			expect(mocks.clientInstances).toHaveLength(1);
+		} finally {
+			await runtime.close();
+			const streamableTransport = mocks.streamableInstances[0] as {
+				close: ReturnType<typeof vi.fn>;
+			};
+			expect(mocks.streamableInstances).toHaveLength(1);
+			expect(streamableTransport.close).toHaveBeenCalledTimes(1);
+			if (previousToken === undefined) {
+				delete process.env.INLINE_TOKEN;
+			} else {
+				process.env.INLINE_TOKEN = previousToken;
+			}
+		}
 	});
 });

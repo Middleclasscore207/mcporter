@@ -10,8 +10,13 @@ import type {
 	CallToolRequest,
 	ListResourcesRequest,
 } from "@modelcontextprotocol/sdk/types.js";
-import { loadServerDefinitions, type ServerDefinition } from "./config.js";
-import { withEnvOverrides } from "./env.js";
+import {
+	type ConfigSourceDefinition,
+	loadServerDefinitions,
+	type MergeStrategy,
+	type ServerDefinition,
+} from "./config.js";
+import { resolveEnvPlaceholders, withEnvOverrides } from "./env.js";
 import { createOAuthSession, type OAuthSession } from "./oauth.js";
 
 const PACKAGE_NAME = "mcp-runtime";
@@ -21,6 +26,9 @@ export interface RuntimeOptions {
 	readonly configPath?: string;
 	readonly servers?: ServerDefinition[];
 	readonly rootDir?: string;
+	readonly configSources?: ConfigSourceDefinition[];
+	readonly mergeStrategy?: MergeStrategy;
+	readonly sourcesConfigPath?: string;
 	readonly clientInfo?: {
 		name: string;
 		version: string;
@@ -86,6 +94,9 @@ export async function createRuntime(
 		(await loadServerDefinitions({
 			configPath: options.configPath,
 			rootDir: options.rootDir,
+			sources: options.configSources,
+			strategy: options.mergeStrategy,
+			sourcesConfigPath: options.sourcesConfigPath,
 		}));
 
 	const runtime = new McpRuntime(servers, options);
@@ -251,9 +262,14 @@ class McpRuntime implements Runtime {
 				return { client, transport, definition, oauthSession };
 			}
 
-			const requestInit: RequestInit = definition.command.headers
-				? { headers: definition.command.headers as HeadersInit }
-				: {};
+			const resolvedHeaders = materializeHeaders(
+				definition.command.headers,
+				definition.name,
+			);
+
+			const requestInit: RequestInit | undefined = resolvedHeaders
+				? { headers: resolvedHeaders as HeadersInit }
+				: undefined;
 
 			const baseOptions = {
 				requestInit,
@@ -369,6 +385,27 @@ function createConsoleLogger(): RuntimeLogger {
 			}
 		},
 	};
+}
+
+function materializeHeaders(
+	headers: Record<string, string> | undefined,
+	serverName: string,
+): Record<string, string> | undefined {
+	if (!headers) {
+		return undefined;
+	}
+	const resolved: Record<string, string> = {};
+	for (const [key, value] of Object.entries(headers)) {
+		try {
+			resolved[key] = resolveEnvPlaceholders(value);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			throw new Error(
+				`Failed to resolve header '${key}' for server '${serverName}': ${message}`,
+			);
+		}
+	}
+	return resolved;
 }
 
 export async function readJsonFile<T = unknown>(
