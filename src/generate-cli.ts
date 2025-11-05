@@ -666,7 +666,7 @@ async function bundleOutput({
 		entryPoints: [sourcePath],
 		outfile: absTarget,
 		bundle: true,
-		platform: runtimeKind === "bun" ? "neutral" : "node",
+		platform: "node",
 		format: runtimeKind === "bun" ? "esm" : "cjs",
 		target: "node20",
 		logLevel: "silent",
