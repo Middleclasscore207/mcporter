@@ -318,13 +318,13 @@ function inferNameFromCommand(command: string): string | undefined {
   return candidate.replace(/\.[a-z0-9]+$/i, '');
 }
 
-async function handleList(runtime: Awaited<ReturnType<typeof createRuntime>>, args: string[]): Promise<void> {
+export async function handleList(runtime: Awaited<ReturnType<typeof createRuntime>>, args: string[]): Promise<void> {
   const flags = extractListFlags(args);
   const target = args.shift();
 
   if (!target) {
     const servers = runtime.getDefinitions();
-    const perServerTimeoutMs = LIST_TIMEOUT_MS;
+    const perServerTimeoutMs = flags.timeoutMs ?? LIST_TIMEOUT_MS;
     const perServerTimeoutSeconds = Math.round(perServerTimeoutMs / 1000);
 
     if (servers.length === 0) {
@@ -388,13 +388,14 @@ async function handleList(runtime: Awaited<ReturnType<typeof createRuntime>>, ar
   }
 
   const definition = runtime.getDefinition(target);
+  const timeoutMs = flags.timeoutMs ?? LIST_TIMEOUT_MS;
   const sourcePath = formatSourceSuffix(definition.source, true);
   console.log(`- ${target}`);
   if (sourcePath) {
     console.log(`  Source: ${sourcePath}`);
   }
   try {
-    const tools = await withTimeout(runtime.listTools(target, { includeSchema: flags.schema }), LIST_TIMEOUT_MS);
+    const tools = await withTimeout(runtime.listTools(target, { includeSchema: flags.schema }), timeoutMs);
     if (tools.length === 0) {
       console.log('  Tools: <none>');
       return;
@@ -409,7 +410,8 @@ async function handleList(runtime: Awaited<ReturnType<typeof createRuntime>>, ar
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to load tool list.';
-    console.warn(`  Tools: <timed out after ${LIST_TIMEOUT_MS}ms>`);
+    const timeoutMs = flags.timeoutMs ?? LIST_TIMEOUT_MS;
+    console.warn(`  Tools: <timed out after ${timeoutMs}ms>`);
     console.warn(`  Reason: ${message}`);
   }
 }
@@ -457,8 +459,9 @@ async function handleCall(runtime: Awaited<ReturnType<typeof createRuntime>>, ar
 }
 
 // extractListFlags captures list-specific options such as --schema.
-function extractListFlags(args: string[]): { schema: boolean } {
+export function extractListFlags(args: string[]): { schema: boolean; timeoutMs?: number } {
   let schema = false;
+  let timeoutMs: number | undefined;
   let index = 0;
   while (index < args.length) {
     const token = args[index];
@@ -467,9 +470,22 @@ function extractListFlags(args: string[]): { schema: boolean } {
       args.splice(index, 1);
       continue;
     }
+    if (token === '--timeout') {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("Flag '--timeout' requires a value.");
+      }
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        throw new Error('--timeout must be a positive integer (milliseconds).');
+      }
+      timeoutMs = parsed;
+      args.splice(index, 2);
+      continue;
+    }
     index += 1;
   }
-  return { schema };
+  return { schema, timeoutMs };
 }
 
 function formatSourceSuffix(source: ServerSource | undefined, inline = false): string {
@@ -667,11 +683,13 @@ Global flags:
 `);
 }
 
-main().catch((error) => {
-  const message = error instanceof Error ? error.message : String(error);
-  logError(message, error instanceof Error ? error : undefined);
-  process.exit(1);
-});
+if (process.env.MCPORTER_DISABLE_AUTORUN !== '1') {
+  main().catch((error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    logError(message, error instanceof Error ? error : undefined);
+    process.exit(1);
+  });
+}
 async function handleAuth(runtime: Awaited<ReturnType<typeof createRuntime>>, args: string[]): Promise<void> {
   // Peel off optional flags before we consume positional args.
   const resetIndex = args.indexOf('--reset');
