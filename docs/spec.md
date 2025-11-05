@@ -28,6 +28,7 @@ summary: 'Plan for the mcp-runtime package replacing the Sweetistics pnpm MCP he
 - Optional OAuth token cache directory handling (defaulting to `~/.mcp-runtime/<server>` when none is provided).
   - Tool signature + schema fetching for `list`.
 - Provide lazy connection pooling per server to minimize startup cost.
+- Expose a lightweight server proxy (`createServerProxy`) that maps camelCase method accesses to tool names, fills JSON-schema defaults, validates required arguments, and returns a helper (`CallResult`) for extracting text/markdown/JSON without re-parsing the content envelope.
 
 ## Work Phases
 1. **Scaffold Package**
