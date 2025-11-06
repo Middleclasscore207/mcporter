@@ -65,7 +65,7 @@ export function renderTemplate({
   const generatorHeaderLiteral = JSON.stringify(generatorHeader);
   const toolHelpLiteral = JSON.stringify(toolHelpLines);
   const embeddedSchemas = JSON.stringify(buildEmbeddedSchemaMap(tools), undefined, 2);
-  const renderedTools = tools.map((tool) => renderToolCommand(tool, timeoutMs));
+  const renderedTools = tools.map((tool) => renderToolCommand(tool, timeoutMs, serverName));
   const toolBlocks = renderedTools.map((entry) => entry.block).join('\n\n');
   const signatureMap = Object.fromEntries(renderedTools.map((entry) => [entry.commandName, entry.tsSignature]));
   const signatureMapLiteral = JSON.stringify(signatureMap, undefined, 2);
@@ -209,7 +209,8 @@ function normalizeEmbeddedServer(server: typeof embeddedServer) {
 
 export function renderToolCommand(
   tool: ToolMetadata,
-  defaultTimeout: number
+  defaultTimeout: number,
+  serverName: string
 ): { block: string; commandName: string; signature: string; tsSignature: string } {
   const commandName = tool.tool.name.replace(/[^a-zA-Z0-9-]/g, '-');
   const description = tool.tool.description ?? `Invoke the ${tool.tool.name} tool.`;
@@ -230,9 +231,15 @@ export function renderToolCommand(
   const tsSignature = formatFunctionSignature(tool.tool.name, tool.options, tool.tool.outputSchema, {
     colorize: false,
   });
-  const exampleInvocation = buildExampleInvocation(commandName, tool.options);
-  const exampleSnippet = exampleInvocation
-    ? `\n\t.addHelpText('after', () => '\\nExample:\\n  ' + ${exampleInvocation})`
+  const exampleCall = formatCallExpressionExample(serverName, tool.tool.name, tool.options);
+  const exampleBlock = exampleCall ? formatExampleBlock([exampleCall], { maxExamples: 1, maxLength: 80 }) : [];
+  const exampleSnippet = exampleBlock.length
+    ? `\n\t.addHelpText('after', () => '\nExample:\n  ' + ${JSON.stringify(exampleBlock[0])})`
+    : '';
+  const { hiddenOptions } = selectDisplayOptions(tool.options, true);
+  const optionalSummary = hiddenOptions.length > 0 ? formatOptionalSummary(hiddenOptions, { colorize: false }) : '';
+  const optionalSnippet = optionalSummary
+    ? `\n\t.addHelpText('afterAll', () => '\n${optionalSummary}\n')`
     : '';
   const block = `program
 \t.command(${JSON.stringify(commandName)})
@@ -284,44 +291,6 @@ function renderOption(option: GeneratedOption): string {
     ? `.requiredOption(${JSON.stringify(flag)}, ${JSON.stringify(description)}${parser ? `, ${parser}` : ''})`
     : `.option(${JSON.stringify(flag)}, ${JSON.stringify(description)}${parser ? `, ${parser}` : ''})`;
   return `	${base}`;
-}
-
-function buildExampleInvocation(commandName: string, options: GeneratedOption[]): string | undefined {
-  const required = options.filter((option) => option.required);
-  const chosen = required.length > 0 ? required : options.slice(0, Math.min(options.length, 2));
-  const parts = [commandName, ...chosen.flatMap((option) => [`--${option.cliName}`, pickExampleValue(option)])].filter(
-    Boolean
-  ) as string[];
-  if (parts.length === 0) {
-    return undefined;
-  }
-  return JSON.stringify(parts.join(' '));
-}
-
-function pickExampleValue(option: GeneratedOption): string {
-  if (option.exampleValue) {
-    return option.exampleValue;
-  }
-  if (option.enumValues && option.enumValues.length > 0) {
-    const [first] = option.enumValues;
-    return first ?? option.property;
-  }
-  switch (option.type) {
-    case 'number':
-      return '1';
-    case 'boolean':
-      return 'true';
-    case 'array':
-      return 'value1,value2';
-    default:
-      if (option.property.toLowerCase().includes('path')) {
-        return '/path/to/file.md';
-      }
-      if (option.property.toLowerCase().includes('id')) {
-        return 'example-id';
-      }
-      return option.property;
-  }
 }
 
 function formatHelpValue(value: unknown): string {

@@ -110,7 +110,8 @@ function formatParamDoc(option: GeneratedOption, wrapWidth: number): string[] {
   return rendered;
 }
 
-export function formatOptionalSummary(hiddenOptions: GeneratedOption[]): string {
+export function formatOptionalSummary(hiddenOptions: GeneratedOption[], options?: { colorize?: boolean }): string {
+  const colorize = options?.colorize !== false;
   const maxNames = 5;
   const names = hiddenOptions.map((option) => option.property);
   if (names.length === 0) {
@@ -118,7 +119,8 @@ export function formatOptionalSummary(hiddenOptions: GeneratedOption[]): string 
   }
   const preview = names.slice(0, maxNames).join(', ');
   const suffix = names.length > maxNames ? ', ...' : '';
-  return extraDimText(`// optional (${names.length}): ${preview}${suffix}`);
+  const tint = colorize ? extraDimText : (value: string): string => value;
+  return tint(`// optional (${names.length}): ${preview}${suffix}`);
 }
 
 interface SignatureFormatOptions {
@@ -158,6 +160,18 @@ export function formatCallExpressionExample(
   return `mcporter call ${serverName}.${toolName}${callSuffix}`;
 }
 
+export function formatExampleBlock(
+  examples: string[],
+  options?: { maxExamples?: number; maxLength?: number }
+): string[] {
+  const maxExamples = options?.maxExamples ?? 1;
+  const maxLength = options?.maxLength ?? 80;
+  return Array.from(new Set(examples))
+    .filter(Boolean)
+    .slice(0, maxExamples)
+    .map((example) => truncateExample(example, maxLength));
+}
+
 export function wrapCommentText(text: string, maxWidth = DEFAULT_WRAP_WIDTH): string[] {
   const trimmed = text.trim();
   if (trimmed.length === 0) {
@@ -183,6 +197,27 @@ export function wrapCommentText(text: string, maxWidth = DEFAULT_WRAP_WIDTH): st
   }
   lines.push(current);
   return lines;
+}
+
+function truncateExample(example: string, maxLength: number): string {
+  if (example.length <= maxLength) {
+    return example;
+  }
+  const openIndex = example.indexOf('(');
+  const closeIndex = example.lastIndexOf(')');
+  if (openIndex === -1 || closeIndex === -1 || closeIndex <= openIndex) {
+    return `${example.slice(0, Math.max(0, maxLength - 1))}…`;
+  }
+  const prefix = example.slice(0, openIndex + 1);
+  const suffix = example.slice(closeIndex);
+  const available = maxLength - prefix.length - suffix.length - 5; // room for ', ...'
+  if (available <= 0) {
+    return `${prefix}...${suffix}`;
+  }
+  const args = example.slice(openIndex + 1, closeIndex).trim();
+  const shortened = args.slice(0, available).trimEnd().replace(/[\s,]+$/, '');
+  const ellipsis = shortened.length > 0 ? `${shortened}, ...` : '...';
+  return `${prefix}${ellipsis}${suffix}`;
 }
 
 function formatInlineParameter(option: GeneratedOption, colorize: boolean): string {

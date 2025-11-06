@@ -9,6 +9,7 @@ import { chooseClosestIdentifier } from './identifier-helpers.js';
 import {
   buildDocComment,
   formatCallExpressionExample,
+  formatExampleBlock,
   formatFunctionSignature,
   formatOptionalSummary,
   selectDisplayOptions,
@@ -385,32 +386,4 @@ function suggestServerName(
   const definitions = runtime.getDefinitions();
   const names = definitions.map((entry) => entry.name);
   return chooseClosestIdentifier(attempted, names);
-}
-
-function formatExampleBlock(examples: string[], maxExamples = 1, maxLength = 80): string[] {
-  return Array.from(new Set(examples))
-    .filter(Boolean)
-    .slice(0, maxExamples)
-    .map((example) => truncateExample(example, maxLength));
-}
-
-function truncateExample(example: string, maxLength: number): string {
-  if (example.length <= maxLength) {
-    return example;
-  }
-  const openIndex = example.indexOf('(');
-  const closeIndex = example.lastIndexOf(')');
-  if (openIndex === -1 || closeIndex === -1 || closeIndex <= openIndex) {
-    return `${example.slice(0, Math.max(0, maxLength - 1))}…`;
-  }
-  const prefix = example.slice(0, openIndex + 1);
-  const suffix = example.slice(closeIndex);
-  const available = maxLength - prefix.length - suffix.length - 5; // room for ', ...'
-  if (available <= 0) {
-    return `${prefix}...${suffix}`;
-  }
-  const args = example.slice(openIndex + 1, closeIndex).trim();
-  const shortened = args.slice(0, available).trimEnd().replace(/[\s,]+$/, '');
-  const ellipsis = shortened.length > 0 ? `${shortened}, ...` : '...';
-  return `${prefix}${ellipsis}${suffix}`;
 }
