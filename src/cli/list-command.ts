@@ -7,14 +7,20 @@ import { formatSourceSuffix, renderServerListRow } from './list-format.js';
 import { boldText, cyanText, dimText, supportsSpinner } from './terminal.js';
 import { LIST_TIMEOUT_MS, withTimeout } from './timeouts.js';
 
-export function extractListFlags(args: string[]): { schema: boolean; timeoutMs?: number } {
+export function extractListFlags(args: string[]): { schema: boolean; timeoutMs?: number; requiredOnly: boolean } {
   let schema = false;
   let timeoutMs: number | undefined;
+  let requiredOnly = false;
   let index = 0;
   while (index < args.length) {
     const token = args[index];
     if (token === '--schema') {
       schema = true;
+      args.splice(index, 1);
+      continue;
+    }
+    if (token === '--required-only') {
+      requiredOnly = true;
       args.splice(index, 1);
       continue;
     }
@@ -33,7 +39,7 @@ export function extractListFlags(args: string[]): { schema: boolean; timeoutMs?:
     }
     index += 1;
   }
-  return { schema, timeoutMs };
+  return { schema, timeoutMs, requiredOnly };
 }
 
 export async function handleList(
@@ -161,7 +167,7 @@ export async function handleList(
     }
     const examples: string[] = [];
     for (const tool of tools) {
-      const example = printToolDetail(target, tool, Boolean(flags.schema));
+      const example = printToolDetail(target, tool, Boolean(flags.schema), flags.requiredOnly);
       if (example) {
         examples.push(example);
       }
@@ -193,10 +199,12 @@ function indent(text: string, pad: string): string {
 function printToolDetail(
   serverName: string,
   tool: { name: string; description?: string; inputSchema?: unknown },
-  includeSchema: boolean
+  includeSchema: boolean,
+  requiredOnly: boolean
 ): string | undefined {
   const options = extractOptions(tool as ServerToolInfo);
-  const lines = formatToolSignatureBlock(tool.name, tool.description ?? '', options);
+  const visibleOptions = requiredOnly ? options.filter((entry) => entry.required) : options;
+  const lines = formatToolSignatureBlock(tool.name, tool.description ?? '', visibleOptions, options.length, requiredOnly);
   for (const line of lines) {
     console.log(`  ${line}`);
   }
@@ -206,16 +214,29 @@ function printToolDetail(
     console.log(indent(JSON.stringify(tool.inputSchema, null, 2), '      '));
   }
   console.log('');
-  return formatCallExpressionExample(serverName, tool.name, options);
+  return formatCallExpressionExample(serverName, tool.name, visibleOptions.length > 0 ? visibleOptions : options);
 }
 
-function formatToolSignatureBlock(name: string, description: string, options: GeneratedOption[]): string[] {
+function formatToolSignatureBlock(
+  name: string,
+  description: string,
+  options: GeneratedOption[],
+  totalOptionCount: number,
+  requiredOnly: boolean
+): string[] {
   const lines: string[] = [];
   if (description) {
     lines.push(dimText(`// ${description}`));
   }
   if (options.length === 0) {
-    lines.push(`${cyanText(name)}()`);
+    if (totalOptionCount > 0 && requiredOnly) {
+      lines.push(`${cyanText(name)}({})`);
+    } else {
+      lines.push(`${cyanText(name)}()`);
+    }
+    if (requiredOnly && totalOptionCount > 0) {
+      lines.push(dimText(`// ${totalOptionCount} optional parameter${totalOptionCount === 1 ? '' : 's'} omitted`));
+    }
     return lines;
   }
   lines.push(`${cyanText(name)}({`);
@@ -223,6 +244,10 @@ function formatToolSignatureBlock(name: string, description: string, options: Ge
     lines.push(`  ${formatParameterSignature(option)}`);
   }
   lines.push('})');
+  if (requiredOnly && totalOptionCount > options.length) {
+    const omitted = totalOptionCount - options.length;
+    lines.push(dimText(`// ${omitted} optional parameter${omitted === 1 ? '' : 's'} omitted`));
+  }
   return lines;
 }
 

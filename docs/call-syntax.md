@@ -39,4 +39,5 @@ create_comment({
 
 - Use `--args '{ "issueId": "LNR-123" }'` if you already have JSON payloads—nothing changed for that workflow.
 - The new syntax respects all existing features (timeouts, `--output`, auto-correction).
+- Prefer `--required-only` when you just want to scan mandatory parameters; re-run without it (or with `--schema`) to inspect optional fields and raw JSON schemas.
 - When in doubt, run `mcporter list <server>` to see the current signature and sample invocation.

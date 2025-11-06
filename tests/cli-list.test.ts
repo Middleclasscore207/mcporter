@@ -9,7 +9,7 @@ describe('CLI list timeout handling', () => {
     const { extractListFlags } = await cliModulePromise;
     const args = ['--timeout', '7500', '--schema', 'server'];
     const flags = extractListFlags(args);
-    expect(flags).toEqual({ schema: true, timeoutMs: 7500 });
+    expect(flags).toEqual({ schema: true, timeoutMs: 7500, requiredOnly: false });
     expect(args).toEqual(['server']);
   });
 
@@ -179,5 +179,53 @@ describe('CLI list classification', () => {
   expect(listToolsSpy).toHaveBeenCalledWith('calculator', { includeSchema: true });
 
   logSpy.mockRestore();
-});
+  });
+
+  it('omits optional parameters when --required-only is set', async () => {
+    const { handleList } = await cliModulePromise;
+    const listToolsSpy = vi.fn((_name: string, options?: { includeSchema?: boolean }) =>
+      Promise.resolve([
+        {
+          name: 'add',
+          description: 'Add two numbers',
+          inputSchema: options?.includeSchema
+            ? {
+                type: 'object',
+                properties: {
+                  a: { type: 'number', description: 'First operand' },
+                  format: { type: 'string', enum: ['json', 'markdown'], description: 'Output serialization format' },
+                  dueBefore: { type: 'string', format: 'date-time', description: 'ISO 8601 timestamp' },
+                },
+                required: ['a'],
+              }
+            : undefined,
+        },
+      ])
+    );
+    const runtime = {
+      getDefinition: (name: string) => ({
+        name,
+        description: 'Test integration server',
+        command: { kind: 'http', url: new URL('https://example.com/mcp') },
+      }),
+      listTools: listToolsSpy,
+    } as unknown as Awaited<ReturnType<typeof import('../src/runtime.js')['createRuntime']>>;
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await handleList(runtime, ['--required-only', 'calculator']);
+
+    const stripAnsi = (value: string) => value.replace(/\x1B\[[0-9;]*m/g, '');
+    const lines = logSpy.mock.calls.map((call) => stripAnsi(call.join(' ')));
+
+    expect(lines.some((line) => line.includes('add({'))).toBe(true);
+    expect(lines.some((line) => line.includes('a: number') && line.includes('First operand'))).toBe(true);
+    expect(lines.some((line) => line.includes('format?:'))).toBe(false);
+    expect(lines.some((line) => line.includes('dueBefore?:'))).toBe(false);
+    expect(lines.some((line) => line.includes('optional parameters omitted'))).toBe(true);
+    expect(lines.some((line) => line.includes('mcporter call calculator.add(a: 1)'))).toBe(true);
+    expect(listToolsSpy).toHaveBeenCalledWith('calculator', { includeSchema: true });
+
+    logSpy.mockRestore();
+  });
 });
