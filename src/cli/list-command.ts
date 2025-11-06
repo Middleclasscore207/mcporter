@@ -283,6 +283,15 @@ function formatTypeAnnotation(option: GeneratedOption): string {
   }
   const dimmedType = dimText(baseType);
   if (option.formatHint && option.type === 'string' && (!option.enumValues || option.enumValues.length === 0)) {
+    const descriptionText = option.description?.toLowerCase() ?? '';
+    const hintLower = option.formatHint.toLowerCase();
+    const normalizedDescription = descriptionText.replace(/[\s_-]+/g, '');
+    const normalizedHint = hintLower.replace(/[\s_-]+/g, '');
+    const hasHintInDescription =
+      descriptionText.includes(hintLower) || normalizedDescription.includes(normalizedHint);
+    if (hasHintInDescription) {
+      return dimmedType;
+    }
     return `${dimmedType} ${dimText(`/* ${option.formatHint} */`)}`;
   }
   return dimmedType;
