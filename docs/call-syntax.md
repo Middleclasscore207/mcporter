@@ -20,12 +20,15 @@ create_comment({
   body: string                 // The content of the comment as Markdown
   parentId?: string            // A parent comment ID to reply to
 })
+  -> result: array             // List of calculation results (falls back to `unknown` when unspecified)
+  -> total: number             // Total results returned
 ```
 
 - Required parameters appear without `?`, optional parameters use `?`.
 - Literal unions (enums) render as `"json" | "markdown"`.
 - Known formats (e.g. ISO 8601) surface inline: `dueDate?: string /* ISO 8601 */`.
 - Each parameter’s schema description is shown as a dimmed `//` comment to match the CLI styling.
+- Return values are summarised with `->` lines derived from the tool’s output schema; when no schema is available we emit `-> result: unknown` as a fallback.
 - After the tool list you’ll see an `Examples:` block with a few ready-to-run calls; the legacy flag form is still accepted but no longer printed for every tool.
 
 ## Function-Call Syntax Details

@@ -4,12 +4,31 @@ import type { ServerDefinition } from '../src/config.js';
 process.env.MCPORTER_DISABLE_AUTORUN = '1';
 const cliModulePromise = import('../src/cli.js');
 
+const stripAnsi = (value: string): string => {
+  let result = '';
+  let index = 0;
+  while (index < value.length) {
+    const char = value[index];
+    if (char === '\u001B') {
+      index += 1;
+      while (index < value.length && value[index] !== 'm') {
+        index += 1;
+      }
+      index += 1;
+      continue;
+    }
+    result += char;
+    index += 1;
+  }
+  return result;
+};
+
 describe('CLI list timeout handling', () => {
   it('parses --timeout flag into list flags', async () => {
     const { extractListFlags } = await cliModulePromise;
     const args = ['--timeout', '7500', '--schema', 'server'];
     const flags = extractListFlags(args);
-    expect(flags).toEqual({ schema: true, timeoutMs: 7500, requiredOnly: true });
+    expect(flags).toEqual({ schema: true, timeoutMs: 7500, requiredOnly: true, ephemeral: undefined });
     expect(args).toEqual(['server']);
   });
 
@@ -17,7 +36,7 @@ describe('CLI list timeout handling', () => {
     const { extractListFlags } = await cliModulePromise;
     const args = ['--required-only', '--schema', 'server'];
     const flags = extractListFlags(args);
-    expect(flags).toEqual({ schema: true, timeoutMs: undefined, requiredOnly: true });
+    expect(flags).toEqual({ schema: true, timeoutMs: undefined, requiredOnly: true, ephemeral: undefined });
     expect(args).toEqual(['server']);
   });
 
@@ -25,7 +44,7 @@ describe('CLI list timeout handling', () => {
     const { extractListFlags } = await cliModulePromise;
     const args = ['--include-optional', 'server'];
     const flags = extractListFlags(args);
-    expect(flags).toEqual({ schema: false, timeoutMs: undefined, requiredOnly: false });
+    expect(flags).toEqual({ schema: false, timeoutMs: undefined, requiredOnly: false, ephemeral: undefined });
     expect(args).toEqual(['server']);
   });
 
@@ -159,6 +178,15 @@ describe('CLI list classification', () => {
                 required: ['a'],
               }
             : undefined,
+          outputSchema: options?.includeSchema
+            ? {
+                type: 'object',
+                properties: {
+                  result: { type: 'array', description: 'List of calculation results' },
+                  total: { type: 'number', description: 'Total results returned' },
+                },
+              }
+            : undefined,
         },
       ])
     );
@@ -171,36 +199,35 @@ describe('CLI list classification', () => {
       listTools: listToolsSpy,
     } as unknown as Awaited<ReturnType<typeof import('../src/runtime.js')['createRuntime']>>;
 
-  const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-  await handleList(runtime, ['calculator']);
+    await handleList(runtime, ['calculator']);
 
-  const stripAnsi = (value: string) => value.replace(/\x1B\[[0-9;]*m/g, '');
-  const rawLines = logSpy.mock.calls.map((call) => call.join(' '));
-  const lines = rawLines.map(stripAnsi);
+    const rawLines = logSpy.mock.calls.map((call) => call.join(' '));
+    const lines = rawLines.map(stripAnsi);
 
-  expect(lines.some((line) => line.trim() === 'calculator')).toBe(true);
-  expect(
-    lines.some((line) =>
-      line.trim().includes('Test integration server') && line.includes('HTTP https://example.com/mcp')
-    )
-  ).toBe(true);
-  expect(lines.some((line) => line.includes('// Add two numbers'))).toBe(true);
-  expect(lines.some((line) => line.includes('add({'))).toBe(true);
-  expect(lines.some((line) => line.includes('a: number') && line.includes('First operand'))).toBe(true);
-  expect(lines.some((line) => line.includes('format?:'))).toBe(false);
-  expect(lines.some((line) => line.includes('dueBefore?:'))).toBe(false);
-  expect(lines.some((line) => line.includes('// optional (2): format, dueBefore'))).toBe(true);
-  expect(lines.some((line) => line.includes('Examples:'))).toBe(true);
-  expect(lines.some((line) => line.includes('mcporter call calculator.add(a: 1)'))).toBe(true);
-  expect(
-    lines.some((line) =>
-      line.includes('Optional parameters hidden; run with --include-optional to view all fields')
-    )
-  ).toBe(true);
-  expect(listToolsSpy).toHaveBeenCalledWith('calculator', { includeSchema: true });
+    expect(lines.some((line) => line.trim() === 'calculator')).toBe(true);
+    expect(
+      lines.some(
+        (line) => line.trim().includes('Test integration server') && line.includes('HTTP https://example.com/mcp')
+      )
+    ).toBe(true);
+    expect(lines.some((line) => line.includes('// Add two numbers'))).toBe(true);
+    expect(lines.some((line) => line.includes('add({'))).toBe(true);
+    expect(lines.some((line) => line.includes('a: number') && line.includes('First operand'))).toBe(true);
+    expect(lines.some((line) => line.includes('format?:'))).toBe(false);
+    expect(lines.some((line) => line.includes('dueBefore?:'))).toBe(false);
+    expect(lines.some((line) => line.includes('// optional (2): format, dueBefore'))).toBe(true);
+    expect(lines.some((line) => line.includes('-> result:'))).toBe(true);
+    expect(lines.some((line) => line.includes('-> total:'))).toBe(true);
+    expect(lines.some((line) => line.includes('Examples:'))).toBe(true);
+    expect(lines.some((line) => line.includes('mcporter call calculator.add(a: 1)'))).toBe(true);
+    expect(
+      lines.some((line) => line.includes('Optional parameters hidden; run with --include-optional to view all fields'))
+    ).toBe(true);
+    expect(listToolsSpy).toHaveBeenCalledWith('calculator', { includeSchema: true });
 
-  logSpy.mockRestore();
+    logSpy.mockRestore();
   });
 
   it('includes optional parameters when --include-optional is set', async () => {
@@ -237,7 +264,6 @@ describe('CLI list classification', () => {
 
     await handleList(runtime, ['--include-optional', 'calculator']);
 
-    const stripAnsi = (value: string) => value.replace(/\x1B\[[0-9;]*m/g, '');
     const lines = logSpy.mock.calls.map((call) => stripAnsi(call.join(' ')));
 
     expect(lines.some((line) => line.includes('add({'))).toBe(true);
@@ -246,12 +272,42 @@ describe('CLI list classification', () => {
     expect(lines.some((line) => line.includes('dueBefore?: string'))).toBe(true);
     expect(lines.some((line) => line.includes('// optional:'))).toBe(false);
     expect(lines.some((line) => line.includes('mcporter call calculator.add(a: 1, format: "json")'))).toBe(true);
+    expect(lines.some((line) => line.includes('-> result:'))).toBe(true);
     expect(
-      lines.some((line) =>
-        line.includes('Optional parameters hidden; run with --include-optional to view all fields')
-      )
+      lines.some((line) => line.includes('Optional parameters hidden; run with --include-optional to view all fields'))
     ).toBe(false);
     expect(listToolsSpy).toHaveBeenCalledWith('calculator', { includeSchema: true });
+
+    logSpy.mockRestore();
+  });
+
+  it('registers an ad-hoc HTTP server when URL is provided', async () => {
+    const { handleList } = await cliModulePromise;
+    const definitions = new Map<string, ServerDefinition>();
+    const registerDefinition = vi.fn((definition: ServerDefinition) => {
+      definitions.set(definition.name, definition);
+    });
+    const runtime = {
+      getDefinitions: () => Array.from(definitions.values()),
+      getDefinition: (name: string) => {
+        const definition = definitions.get(name);
+        if (!definition) {
+          throw new Error('missing');
+        }
+        return definition;
+      },
+      listTools: vi.fn(() => Promise.resolve([])),
+      registerDefinition,
+    } as unknown as Awaited<ReturnType<typeof import('../src/runtime.js')['createRuntime']>>;
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await handleList(runtime, ['https://mcp.example.com/mcp']);
+
+    expect(registerDefinition).toHaveBeenCalled();
+    const registeredName = registerDefinition.mock.calls[0][0].name;
+    expect(registeredName).toBe('mcp-example-com-mcp');
+    expect(runtime.listTools).toHaveBeenCalledWith('mcp-example-com-mcp', { includeSchema: true });
 
     logSpy.mockRestore();
   });

@@ -1,5 +1,6 @@
 import ora from 'ora';
 import type { ServerToolInfo } from '../runtime.js';
+import { type EphemeralServerSpec, persistEphemeralServer, resolveEphemeralServer } from './adhoc-server.js';
 import type { GeneratedOption } from './generate/tools.js';
 import { extractOptions } from './generate/tools.js';
 import type { ListSummaryResult, StatusCategory } from './list-format.js';
@@ -7,15 +8,106 @@ import { formatSourceSuffix, renderServerListRow } from './list-format.js';
 import { boldText, cyanText, dimText, extraDimText, supportsSpinner } from './terminal.js';
 import { LIST_TIMEOUT_MS, withTimeout } from './timeouts.js';
 
-export function extractListFlags(args: string[]): { schema: boolean; timeoutMs?: number; requiredOnly: boolean } {
+export function extractListFlags(args: string[]): {
+  schema: boolean;
+  timeoutMs?: number;
+  requiredOnly: boolean;
+  ephemeral?: EphemeralServerSpec;
+} {
   let schema = false;
   let timeoutMs: number | undefined;
   let requiredOnly = true;
+  let ephemeral: EphemeralServerSpec | undefined;
   let index = 0;
   while (index < args.length) {
     const token = args[index];
     if (token === '--schema') {
       schema = true;
+      args.splice(index, 1);
+      continue;
+    }
+    if (token === '--http-url') {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("Flag '--http-url' requires a value.");
+      }
+      ephemeral = { ...(ephemeral ?? {}), httpUrl: value };
+      args.splice(index, 2);
+      continue;
+    }
+    if (token === '--allow-http') {
+      ephemeral = { ...(ephemeral ?? {}), allowInsecureHttp: true };
+      args.splice(index, 1);
+      continue;
+    }
+    if (token === '--stdio') {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("Flag '--stdio' requires a value.");
+      }
+      ephemeral = { ...(ephemeral ?? {}), stdioCommand: value };
+      args.splice(index, 2);
+      continue;
+    }
+    if (token === '--stdio-arg') {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("Flag '--stdio-arg' requires a value.");
+      }
+      const argsList = [...(ephemeral?.stdioArgs ?? []), value];
+      ephemeral = { ...(ephemeral ?? {}), stdioArgs: argsList };
+      args.splice(index, 2);
+      continue;
+    }
+    if (token === '--env') {
+      const value = args[index + 1];
+      if (!value || !value.includes('=')) {
+        throw new Error("Flag '--env' requires KEY=value.");
+      }
+      const [key, ...rest] = value.split('=');
+      const envMap = { ...(ephemeral?.env ?? {}) };
+      envMap[key] = rest.join('=');
+      ephemeral = { ...(ephemeral ?? {}), env: envMap };
+      args.splice(index, 2);
+      continue;
+    }
+    if (token === '--cwd') {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("Flag '--cwd' requires a value.");
+      }
+      ephemeral = { ...(ephemeral ?? {}), cwd: value };
+      args.splice(index, 2);
+      continue;
+    }
+    if (token === '--name') {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("Flag '--name' requires a value.");
+      }
+      ephemeral = { ...(ephemeral ?? {}), name: value };
+      args.splice(index, 2);
+      continue;
+    }
+    if (token === '--description') {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("Flag '--description' requires a value.");
+      }
+      ephemeral = { ...(ephemeral ?? {}), description: value };
+      args.splice(index, 2);
+      continue;
+    }
+    if (token === '--persist') {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("Flag '--persist' requires a value.");
+      }
+      ephemeral = { ...(ephemeral ?? {}), persistPath: value };
+      args.splice(index, 2);
+      continue;
+    }
+    if (token === '--yes') {
       args.splice(index, 1);
       continue;
     }
@@ -44,7 +136,7 @@ export function extractListFlags(args: string[]): { schema: boolean; timeoutMs?:
     }
     index += 1;
   }
-  return { schema, timeoutMs, requiredOnly };
+  return { schema, timeoutMs, requiredOnly, ephemeral };
 }
 
 export async function handleList(
@@ -52,7 +144,24 @@ export async function handleList(
   args: string[]
 ): Promise<void> {
   const flags = extractListFlags(args);
-  const target = args.shift();
+  let target = args.shift();
+  let ephemeralResolution: ReturnType<typeof resolveEphemeralServer> | undefined;
+
+  if (!flags.ephemeral && target && /^https?:\/\//i.test(target)) {
+    flags.ephemeral = { httpUrl: target };
+    target = undefined;
+  }
+
+  if (flags.ephemeral) {
+    ephemeralResolution = resolveEphemeralServer(flags.ephemeral);
+    runtime.registerDefinition(ephemeralResolution.definition, { overwrite: true });
+    if (flags.ephemeral.persistPath) {
+      await persistEphemeralServer(ephemeralResolution, flags.ephemeral.persistPath);
+    }
+    if (!target) {
+      target = ephemeralResolution.name;
+    }
+  }
 
   if (!target) {
     const servers = runtime.getDefinitions();
@@ -222,7 +331,7 @@ interface ToolDetailResult {
 
 function printToolDetail(
   serverName: string,
-  tool: { name: string; description?: string; inputSchema?: unknown },
+  tool: { name: string; description?: string; inputSchema?: unknown; outputSchema?: unknown },
   includeSchema: boolean,
   requiredOnly: boolean
 ): ToolDetailResult {
@@ -236,6 +345,12 @@ function printToolDetail(
   if (includeSchema && tool.inputSchema) {
     // Schemas can be large — indenting keeps multi-line JSON legible without disrupting surrounding output.
     console.log(indent(JSON.stringify(tool.inputSchema, null, 2), '      '));
+  }
+  const returnLines = formatReturnLines(tool.outputSchema);
+  if (returnLines && returnLines.length > 0) {
+    for (const line of returnLines) {
+      console.log(`  ${line}`);
+    }
   }
   console.log('');
   return {
@@ -278,6 +393,78 @@ function formatOptionalNote(omittedOptions: GeneratedOption[]): string | undefin
   return extraDimText(`// optional (${names.length}): ${names.join(', ')}`);
 }
 
+function formatReturnLines(schema: unknown): string[] | undefined {
+  if (!schema || typeof schema !== 'object') {
+    return [`-> result: ${dimText('unknown')}`];
+  }
+  const record = schema as Record<string, unknown>;
+  const type = typeof record.type === 'string' ? (record.type as string) : undefined;
+
+  if (type === 'object' || (!type && typeof record.properties === 'object')) {
+    const properties = (record.properties ?? {}) as Record<string, unknown>;
+    const entries = Object.entries(properties);
+    if (entries.length === 0) {
+      return ['-> result: object'];
+    }
+    const lines: string[] = [];
+    const limit = 5;
+    entries.slice(0, limit).forEach(([key, descriptor]) => {
+      if (!descriptor || typeof descriptor !== 'object') {
+        lines.push(formatReturnEntry(key, 'unknown'));
+        return;
+      }
+      const descRecord = descriptor as Record<string, unknown>;
+      const descType = inferSchemaDisplayType(descRecord);
+      const description = typeof descRecord.description === 'string' ? (descRecord.description as string) : undefined;
+      lines.push(formatReturnEntry(key, descType, description));
+    });
+    if (entries.length > limit) {
+      lines.push(extraDimText(`-> … ${entries.length - limit} more field(s)`));
+    }
+    return lines;
+  }
+
+  if (type === 'array') {
+    const items =
+      record.items && typeof record.items === 'object' ? (record.items as Record<string, unknown>) : undefined;
+    const itemType = items ? inferSchemaDisplayType(items) : 'unknown';
+    const description = items && typeof items.description === 'string' ? (items.description as string) : undefined;
+    return [formatReturnEntry('items[]', itemType, description)];
+  }
+
+  if (type) {
+    return [formatReturnEntry('result', type)];
+  }
+
+  return undefined;
+}
+
+function formatReturnEntry(name: string, type: string, description?: string): string {
+  const typeText = dimText(type);
+  const comment = description ? `  ${extraDimText(`// ${description}`)}` : '';
+  return `-> ${name}: ${typeText}${comment}`;
+}
+
+function inferSchemaDisplayType(descriptor: Record<string, unknown>): string {
+  const type = typeof descriptor.type === 'string' ? (descriptor.type as string) : undefined;
+  if (!type && typeof descriptor.properties === 'object') {
+    return 'object';
+  }
+  if (!type && descriptor.items && typeof descriptor.items === 'object') {
+    return `${inferSchemaDisplayType(descriptor.items as Record<string, unknown>)}[]`;
+  }
+  if (!type && Array.isArray(descriptor.enum)) {
+    const values = (descriptor.enum as unknown[]).filter((entry): entry is string => typeof entry === 'string');
+    if (values.length > 0) {
+      return values.map((entry) => JSON.stringify(entry)).join(' | ');
+    }
+  }
+  if (type === 'array' && descriptor.items && typeof descriptor.items === 'object') {
+    return `${inferSchemaDisplayType(descriptor.items as Record<string, unknown>)}[]`;
+  }
+  return type ?? 'unknown';
+}
+
 function formatParameterSignature(option: GeneratedOption): string {
   const typeAnnotation = formatTypeAnnotation(option);
   const optionalSuffix = option.required ? '' : '?';
@@ -314,8 +501,7 @@ function formatTypeAnnotation(option: GeneratedOption): string {
     const hintLower = option.formatHint.toLowerCase();
     const normalizedDescription = descriptionText.replace(/[\s_-]+/g, '');
     const normalizedHint = hintLower.replace(/[\s_-]+/g, '');
-    const hasHintInDescription =
-      descriptionText.includes(hintLower) || normalizedDescription.includes(normalizedHint);
+    const hasHintInDescription = descriptionText.includes(hintLower) || normalizedDescription.includes(normalizedHint);
     if (hasHintInDescription) {
       return dimmedType;
     }
