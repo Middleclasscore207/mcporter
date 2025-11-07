@@ -93,15 +93,14 @@ export function resolveBundleTarget({
 
 export function computeCompileTarget(
   compileOption: boolean | string | undefined,
-  bundlePath: string,
+  _bundlePath: string,
   serverName: string
 ): string {
   if (typeof compileOption === 'string') {
     return compileOption;
   }
-  const parsed = path.parse(bundlePath);
-  const base = parsed.name.replace(/\.bundle$/, '') || serverName || 'mcporter-cli';
-  return path.join(parsed.dir, base);
+  const baseName = sanitizeFileName(serverName) || 'mcporter-cli';
+  return resolveUniquePath(process.cwd(), baseName);
 }
 
 function createLocalDependencyAliasPlugin(specifiers: string[]): Plugin | undefined {
@@ -147,4 +146,22 @@ function resolveLocalDependency(specifier: string): string | undefined {
 
 function escapeForRegExp(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function sanitizeFileName(input: string): string {
+  const slug = input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-');
+  return slug.replace(/^-+|-+$/g, '');
+}
+
+function resolveUniquePath(directory: string, baseName: string): string {
+  let attempt = path.join(directory, baseName);
+  let suffix = 1;
+  while (fsSync.existsSync(attempt)) {
+    attempt = path.join(directory, `${baseName}-${suffix}`);
+    suffix += 1;
+  }
+  return attempt;
 }

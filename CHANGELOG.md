@@ -8,6 +8,9 @@ _Nothing yet._
 ### CLI
 - Embedded the CLI version so Homebrew/Bun builds respond to `mcporter --version` even when `package.json` is unavailable.
 - Added `tests/cli-version.test.ts` to verify `runCli(['--version'])` falls back to the runtime constant whenever package metadata can’t be read.
+
+### Code generation
+- Generated binaries now default to the current working directory (using the inferred server name) when `--compile` is provided without a path, and automatically append a numeric suffix when the target already exists.
 - Improved `generate-cli` so inline stdio commands (e.g., `"npx chrome-devtools-mcp"`) parse correctly even when invoked from empty directories.
 
 ### Code generation
