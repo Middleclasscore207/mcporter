@@ -7,6 +7,7 @@ import { handleEmitTs } from './cli/emit-ts-command.js';
 import { extractEphemeralServerFlags } from './cli/ephemeral-flags.js';
 import { CliUsageError } from './cli/errors.js';
 import { extractGeneratorFlags } from './cli/generate/flag-parser.js';
+import { extractHttpServerTarget, looksLikeHttpUrl, normalizeHttpUrlCandidate } from './cli/http-utils.js';
 import { handleList } from './cli/list-command.js';
 import { formatSourceSuffix } from './cli/list-format.js';
 import { getActiveLogger, getActiveLogLevel, logError, logInfo, logWarn, setLogLevel } from './cli/logger-context.js';
@@ -225,7 +226,8 @@ function parseGenerateFlags(args: string[]): GenerateFlags {
       continue;
     }
     if (token === '--command') {
-      command = expectValue(token, args[index + 1]);
+      const value = expectValue(token, args[index + 1]);
+      command = normalizeCommandInput(value);
       args.splice(index, 2);
       continue;
     }
@@ -271,7 +273,10 @@ function parseGenerateFlags(args: string[]): GenerateFlags {
       args.splice(index, 1);
       continue;
     }
-    throw new Error(`Unknown flag '${token}' for generate-cli.`);
+    if (token.startsWith('--')) {
+      throw new Error(`Unknown flag '${token}' for generate-cli.`);
+    }
+    index += 1;
   }
 
   return {
@@ -298,6 +303,11 @@ function expectValue(flag: string, value: string | undefined): string {
   return value;
 }
 
+function normalizeCommandInput(value: string): string {
+  const target = extractHttpServerTarget(value);
+  return target ?? value;
+}
+
 // handleGenerateCli parses flags and generates the requested standalone CLI.
 export async function handleGenerateCli(args: string[], globalFlags: FlagMap): Promise<void> {
   const parsed = parseGenerateFlags(args);
@@ -306,6 +316,21 @@ export async function handleGenerateCli(args: string[], globalFlags: FlagMap): P
   }
   if (parsed.dryRun && !parsed.from) {
     throw new Error('--dry-run currently requires --from <artifact>.');
+  }
+
+  if (!parsed.server && !parsed.command && !parsed.from) {
+    const positional = args.find((token) => token && !token.startsWith('--'));
+    if (positional) {
+      const position = args.indexOf(positional);
+      if (position !== -1) {
+        args.splice(position, 1);
+      }
+      if (looksLikeHttpUrl(positional) || positional.includes('://')) {
+        parsed.command = positional;
+      } else {
+        parsed.server = positional;
+      }
+    }
   }
 
   if (parsed.from) {
@@ -493,41 +518,50 @@ function inferNameFromCommand(command: string): string | undefined {
   if (!trimmed) {
     return undefined;
   }
+  const candidate = normalizeHttpUrlCandidate(trimmed) ?? trimmed;
   try {
-    const url = new URL(trimmed);
-    const genericHosts = new Set(['www', 'api', 'mcp', 'service', 'services', 'app', 'localhost']);
-    const knownTlds = new Set(['com', 'net', 'org', 'io', 'ai', 'app', 'dev', 'co', 'cloud']);
-    const parts = url.hostname.split('.').filter(Boolean);
-    const filtered = parts.filter((part) => {
-      const lower = part.toLowerCase();
-      if (genericHosts.has(lower)) {
-        return false;
-      }
-      if (knownTlds.has(lower)) {
-        return false;
-      }
-      if (/^\d+$/.test(part)) {
-        return false;
-      }
-      return true;
-    });
-    if (filtered.length > 0) {
-      const last = filtered[filtered.length - 1];
-      if (last) {
-        return last;
-      }
-    }
-    const segments = url.pathname.split('/').filter(Boolean);
-    const firstSegment = segments[0];
-    if (firstSegment) {
-      return firstSegment.replace(/[^a-zA-Z0-9-_]/g, '-');
+    const url = new URL(candidate);
+    const derived = deriveNameFromUrl(url);
+    if (derived) {
+      return derived;
     }
   } catch {
     // not a URL; fall through to filesystem heuristics
   }
   const firstToken = trimmed.split(/\s+/)[0] ?? trimmed;
-  const candidate = firstToken.split(/[\\/]/).pop() ?? firstToken;
-  return candidate.replace(/\.[a-z0-9]+$/i, '');
+  const candidateToken = firstToken.split(/[\\/]/).pop() ?? firstToken;
+  return candidateToken.replace(/\.[a-z0-9]+$/i, '');
+}
+
+function deriveNameFromUrl(url: URL): string | undefined {
+  const genericHosts = new Set(['www', 'api', 'mcp', 'service', 'services', 'app', 'localhost']);
+  const knownTlds = new Set(['com', 'net', 'org', 'io', 'ai', 'app', 'dev', 'co', 'cloud']);
+  const parts = url.hostname.split('.').filter(Boolean);
+  const filtered = parts.filter((part) => {
+    const lower = part.toLowerCase();
+    if (genericHosts.has(lower)) {
+      return false;
+    }
+    if (knownTlds.has(lower)) {
+      return false;
+    }
+    if (/^\d+$/.test(part)) {
+      return false;
+    }
+    return true;
+  });
+  if (filtered.length > 0) {
+    const last = filtered[filtered.length - 1];
+    if (last) {
+      return last;
+    }
+  }
+  const segments = url.pathname.split('/').filter(Boolean);
+  const firstSegment = segments[0];
+  if (firstSegment) {
+    return firstSegment.replace(/[^a-zA-Z0-9-_]/g, '-');
+  }
+  return undefined;
 }
 
 // buildGenerateCliCommand reconstructs the generate-cli invocation for logging/dry runs.
@@ -651,13 +685,16 @@ export async function handleAuth(runtime: Awaited<ReturnType<typeof createRuntim
   }
   let ephemeralSpec: EphemeralServerSpec | undefined = extractEphemeralServerFlags(args);
   let target = args.shift();
-  if (target && looksLikeHttpUrl(target)) {
-    const reused = findServerByHttpUrl(runtime.getDefinitions(), target);
-    if (reused) {
-      target = reused;
-    } else if (!ephemeralSpec) {
-      ephemeralSpec = { httpUrl: target };
-      target = undefined;
+  if (target) {
+    const normalizedTarget = normalizeHttpUrlCandidate(target);
+    if (normalizedTarget) {
+      const reused = findServerByHttpUrl(runtime.getDefinitions(), normalizedTarget);
+      if (reused) {
+        target = reused;
+      } else if (!ephemeralSpec) {
+        ephemeralSpec = { httpUrl: normalizedTarget };
+        target = undefined;
+      }
     }
   }
 
@@ -718,8 +755,4 @@ function shouldRetryAuthError(error: unknown): boolean {
     return false;
   }
   return /unauthorized|invalid[_-]?token|\b(401|403)\b/i.test(message);
-}
-
-function looksLikeHttpUrl(value: string): boolean {
-  return /^https?:\/\//i.test(value);
 }

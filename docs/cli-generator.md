@@ -73,6 +73,8 @@ chmod +x context7
 - `--compile [path]` implies bundling and invokes `bun build --compile` to create the native executable (Bun only). When you omit the path, the compiled binary inherits the server name.
 - Use `--server '{...}'` when you need advanced configuration (headers, env vars, stdio commands, OAuth metadata).
 - Omit `--name` to let mcporter infer it from the command URL (for example, `https://mcp.context7.com/mcp` becomes `context7`).
+- When targeting an existing config entry, you can skip `--server` and pass the name as a positional argument:
+  `npx mcporter generate-cli linear --bundle dist/linear.js`.
 ```
 
 

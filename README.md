@@ -32,6 +32,7 @@ npx mcporter call 'linear.create_comment(issueId: "ENG-123", body: "Looks good!"
 npx mcporter list
 npx mcporter list context7 --schema
 npx mcporter list https://mcp.linear.app/mcp --all-parameters
+npx mcporter list shadcn.io/api/mcp.getComponents           # URL + tool suffix auto-resolves
 npx mcporter list --stdio "bun run ./local-server.ts" --env TOKEN=xyz
 ```
 
@@ -115,6 +116,7 @@ LINEAR_API_KEY=sk_linear_example npx mcporter call linear.search_documentation q
 npx mcporter call chrome-devtools.take_snapshot
 npx mcporter call 'linear.create_comment(issueId: "LNR-123", body: "Hello world")'
 npx mcporter call https://mcp.linear.app/mcp.list_issues assignee=me
+npx mcporter call shadcn.io/api/mcp.getComponent component=vortex   # protocol optional; defaults to https
 npx mcporter call linear.listIssues --tool listIssues   # auto-corrects to list_issues
 npx mcporter linear.list_issues                         # shorthand: infers `call`
 ```
@@ -269,6 +271,9 @@ npx mcporter generate-cli \
 - `--runtime bun|node` picks the runtime for generated code (Bun required for `--compile`).
 - Add `--compile` to emit a Bun-compiled binary; MCPorter cleans up intermediate bundles when you omit `--bundle`.
 - Use `--from <artifact>` (optionally `--dry-run`) to regenerate an existing CLI using its embedded metadata.
+- Prefer a positional shorthand if the server already lives in your config/imports:
+  `npx mcporter generate-cli linear --bundle dist/linear.js`.
+- `--server`/`--command` accept HTTP URLs, optional `.tool` suffixes, and even scheme-less hosts (`shadcn.io/api/mcp.getComponents`).
 
 Every artifact embeds regeneration metadata (generator version, resolved server definition, invocation flags). Use:
 
@@ -292,6 +297,7 @@ npx mcporter emit-ts linear --mode client --out clients/linear.ts
 - `--mode types` (default) produces a `.d.ts` interface you can import anywhere.
 - `--mode client` emits the `.d.ts` **and** a `.ts` helper that wraps `createRuntime` / `createServerProxy` for you.
 - Add `--include-optional` whenever you want every optional field spelled out (mirrors `mcporter list --all-parameters`).
+- The `<server>` argument also understands HTTP URLs and selectors with `.tool` suffixes or missing protocols—mirroring the main CLI.
 
 See [docs/emit-ts.md](docs/emit-ts.md) for the full flag reference plus inline snapshots of the emitted files.
 

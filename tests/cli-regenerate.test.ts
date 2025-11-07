@@ -40,6 +40,14 @@ afterEach(async () => {
 });
 
 describe('inspect/generate CLI artifacts', () => {
+  it('normalizes HTTP selectors passed to --command', async () => {
+    const args = ['--command', 'shadcn.io/api/mcp.getComponents', '--name', 'demo', '--output', 'out.ts'];
+    await handleGenerateCli(args, {});
+    expect(generateCliMock).toHaveBeenCalledTimes(1);
+    const invocation = generateCliMock.mock.calls[0]?.[0];
+    expect(invocation?.serverRef).toContain('shadcn.io/api/mcp');
+  });
+
   it('prints metadata summary for inspect-cli', async () => {
     const artifactPath = await writeMetadataFixture('binary');
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -92,6 +100,40 @@ describe('inspect/generate CLI artifacts', () => {
       .join('\n');
     expect(printed).toContain('Dry run');
     expect(printed).toContain('generate-cli --server');
+
+    logSpy.mockRestore();
+  });
+
+  it('allows positional server references', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await handleGenerateCli(['linear'], {});
+
+    expect(generateCliMock).toHaveBeenCalledTimes(1);
+    const invocation = generateCliMock.mock.calls[0]?.[0];
+    expect(invocation).toMatchObject({
+      serverRef: 'linear',
+    });
+    expect(logSpy.mock.calls.some((call) => String(call[0]).includes('Generated CLI'))).toBe(true);
+
+    logSpy.mockRestore();
+  });
+
+  it('treats positional http urls as ad-hoc commands', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const commandUrl = 'https://www.shadcn.io/api/mcp';
+
+    await handleGenerateCli([commandUrl, '--name', 'shadcn'], {});
+
+    expect(generateCliMock).toHaveBeenCalledTimes(1);
+    const invocation = generateCliMock.mock.calls[0]?.[0];
+    expect(invocation.serverRef).toBe(
+      JSON.stringify({
+        name: 'shadcn',
+        command: commandUrl,
+      })
+    );
+    expect(logSpy.mock.calls.some((call) => String(call[0]).includes('Generated CLI'))).toBe(true);
 
     logSpy.mockRestore();
   });

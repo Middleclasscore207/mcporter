@@ -36,6 +36,9 @@ A quick reference for the primary `mcporter` subcommands. Each command inherits
     `regenerate-cli` behavior, must point at an existing CLI).
   - `--dry-run` – print the resolved `mcporter generate-cli ...` command without
     executing (requires `--from`).
+  - Positional shorthand: `npx mcporter generate-cli linear` uses the configured
+    `linear` definition; `npx mcporter generate-cli https://example.com/mcp`
+    treats the URL as an ad-hoc server definition.
 
 ## `mcporter emit-ts <server>`
 - Emits TypeScript definitions (and optionally a ready-to-use client) describing
