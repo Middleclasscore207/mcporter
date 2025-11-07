@@ -60,6 +60,15 @@ describe('generate-cli runner internals', () => {
     expect(inferred).toBe('demo-tools');
   });
 
+  it('infers npm package names without version specifiers in inline commands', () => {
+    const args = ['--command', 'npx -y chrome-devtools-mcp'];
+    const parsed = generateInternals.parseGenerateFlags([...args]);
+    const spec = parsed.command as { command: string; args?: string[] };
+    expect(spec.args).toEqual(['-y', 'chrome-devtools-mcp']);
+    const inferred = parsed.command !== undefined ? generateInternals.inferNameFromCommand(parsed.command) : undefined;
+    expect(inferred).toBe('chrome-devtools-mcp');
+  });
+
   it('normalizes scheme-less HTTP selectors passed to --command', () => {
     const args = ['--command', 'shadcn.io/api/mcp.getComponents'];
     const parsed = generateInternals.parseGenerateFlags([...args]);

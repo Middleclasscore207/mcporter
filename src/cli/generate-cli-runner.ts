@@ -390,6 +390,17 @@ function inferNameFromCommand(command: CommandInput): string | undefined {
     } catch {
       // not a URL; fall through to filesystem heuristics
     }
+    if (looksLikeInlineCommand(trimmed)) {
+      try {
+        const parsed = parseInlineCommand(trimmed);
+        const derived = inferNameFromCommand(parsed);
+        if (derived) {
+          return derived;
+        }
+      } catch {
+        // unable to parse; fall through to token heuristic
+      }
+    }
     const firstToken = trimmed.split(/\s+/)[0] ?? trimmed;
     const candidateToken = firstToken.split(/[\\/]/).pop() ?? firstToken;
     return slugify(candidateToken.replace(/\.[a-z0-9]+$/i, ''));
@@ -405,6 +416,10 @@ function inferNameFromCommand(command: CommandInput): string | undefined {
   const packageArg = parts.find((_part, index) => index > 0 && /[@/]/.test(_part));
   if (packageArg) {
     return slugify(packageArg.replace(/^@/, '').split('@')[0] ?? packageArg);
+  }
+  const bareArg = findLastPositionalArg(parts);
+  if (bareArg) {
+    return slugify(bareArg);
   }
   return slugify(basename(parts[0] ?? 'command'));
 }
@@ -429,6 +444,26 @@ function stripExtension(value: string): string {
     return value;
   }
   return value.slice(0, index);
+}
+
+function findLastPositionalArg(parts: string[]): string | undefined {
+  for (let index = parts.length - 1; index >= 1; index -= 1) {
+    const part = parts[index];
+    if (!part) {
+      continue;
+    }
+    if (part.startsWith('-')) {
+      continue;
+    }
+    if (/^[A-Za-z0-9_]+=/.test(part)) {
+      continue;
+    }
+    if (part.includes('://')) {
+      continue;
+    }
+    return part;
+  }
+  return undefined;
 }
 
 function looksLikeInlineCommand(value: string): boolean {

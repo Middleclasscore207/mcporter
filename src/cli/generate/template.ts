@@ -171,13 +171,6 @@ const plainTitle = embeddedName + ' — ' + embeddedDescription;
 				usage: embeddedName + ' <tool> key=value',
 			},
 		]));
-	lines.push(...formatSection('Generator utilities', [
-			{
-				name: '__mcporter_inspect',
-				summary: 'Print metadata for mcporter inspect-cli',
-				usage: embeddedName + ' __mcporter_inspect',
-			},
-		]));
 	if (generatorTools) {
 		lines.push(formatEmbeddedTools());
 	}
