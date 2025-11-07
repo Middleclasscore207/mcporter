@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { type RolldownPlugin, rolldown } from 'rolldown';
+import type { RolldownPlugin } from 'rolldown';
 import { verifyBunAvailable } from './runtime.js';
 
 const localRequire = createRequire(import.meta.url);
@@ -44,10 +44,22 @@ async function bundleWithRolldown({
   runtimeKind: 'node' | 'bun';
   minify: boolean;
 }): Promise<string> {
+  let rolldownImpl: typeof import('rolldown')['rolldown'];
+  try {
+    ({ rolldown: rolldownImpl } = await import('rolldown'));
+  } catch (error) {
+    const message =
+      'Rolldown bundling is unavailable in this build of mcporter; rerun with --bundler bun or install mcporter via npm (Node.js) to use the Rolldown bundler.';
+    if (error instanceof Error) {
+      error.message = `${message}\n\n${error.message}`;
+      throw error;
+    }
+    throw new Error(message);
+  }
   const absTarget = path.resolve(targetPath);
   await fs.mkdir(path.dirname(absTarget), { recursive: true });
   const plugins = dependencyAliasPlugin ? [dependencyAliasPlugin] : undefined;
-  const bundle = await rolldown({
+  const bundle = await rolldownImpl({
     input: sourcePath,
     treeshake: false,
     plugins,
