@@ -14,8 +14,15 @@ If you are unsure about sth, just google it.
 - `pnpm test`: Executes the full Vitest suite once.
 - `pnpm dev`: Watches and incrementally rebuilds the library with TypeScript.
 - `pnpm clean`: Removes `dist/` so you can verify fresh builds.
+- `pnpm run docs:list`: Lists required rule summaries via `scripts/docs-list.ts`; run this at the start of every session and reopen any referenced doc before writing code.
 - `tmux new-session -- pnpm mcporter:list`: Exercise the CLI in a resilient terminal; tmux makes it easy to spot stalls or hung servers.
 - `gh run list --limit 1 --watch`: Stream CI status in real time; use `gh run view --log` on the returned run id to inspect failures quickly.
+
+## Guardrail Tooling (runner/git wrappers)
+- Use `./runner <command>` for every non-trivial shell command (tests, builds, npm, node, bun, etc.). The Bun-backed runner enforces timeouts, blocks risky subcommands, and keeps logs consistent. Only simple read-only tools (e.g., `cat`, `ls`, `rg`) may bypass it.
+- When you must run git, invoke it through the wrapper: `./runner git status -sb`, `./runner git diff`, or `./runner git log`. Those are the only git subcommands permitted. Never run `git push` unless the user asks explicitly, and even then go through `./runner git push`.
+- Never call `git add` / `git commit` directly. To create a commit, list the exact paths via `./scripts/committer "type: summary" path/to/file1 path/to/file2`.
+- If you need to run the Bun-based git policy helper directly, you can use `./git ...`, but prefer `./runner git ...` so logging stays uniform.
 
 ## Coding Style & Naming Conventions
 - TypeScript files use 2-space indentation, modern ES module syntax, and `strict` compiler settings.
