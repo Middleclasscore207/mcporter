@@ -14,7 +14,7 @@ import { handleGenerateCli } from './cli/generate-cli-runner.js';
 import { looksLikeHttpUrl } from './cli/http-utils.js';
 import { handleInspectCli } from './cli/inspect-cli-command.js';
 import { buildConnectionIssueEnvelope } from './cli/json-output.js';
-import { handleList } from './cli/list-command.js';
+import { handleList, printListHelp } from './cli/list-command.js';
 import { getActiveLogger, getActiveLogLevel, logError, logInfo, logWarn, setLogLevel } from './cli/logger-context.js';
 import { consumeOutputFormat } from './cli/output-format.js';
 import { DEBUG_HANG, dumpActiveHandles, terminateChildProcesses } from './cli/runtime-debug.js';
@@ -130,6 +130,11 @@ export async function runCli(argv: string[]): Promise<void> {
 
   try {
     if (resolvedCommand === 'list') {
+      if (consumeHelpTokens(resolvedArgs)) {
+        printListHelp();
+        process.exitCode = 0;
+        return;
+      }
       await handleList(runtime, resolvedArgs);
       return;
     }
@@ -355,6 +360,18 @@ async function printVersion(): Promise<void> {
 
 function isHelpToken(token: string): boolean {
   return token === '--help' || token === '-h' || token === 'help';
+}
+
+function consumeHelpTokens(args: string[]): boolean {
+  let found = false;
+  for (let index = args.length - 1; index >= 0; index -= 1) {
+    const token = args[index];
+    if (token && isHelpToken(token)) {
+      args.splice(index, 1);
+      found = true;
+    }
+  }
+  return found;
 }
 
 function isVersionToken(token: string): boolean {

@@ -321,6 +321,41 @@ export async function handleList(
   }
 }
 
+export function printListHelp(): void {
+  const lines = [
+    'Usage: mcporter list [server | url] [flags]',
+    '',
+    'Targets:',
+    '  <name>                 Use a server from config/mcporter.json or editor imports.',
+    '  https://host/mcp       List an HTTP server directly; mcporter infers the entry.',
+    '',
+    'Ad-hoc servers:',
+    '  --http-url <url>       Register an HTTP server for this run.',
+    '  --allow-http           Permit plain http:// URLs with --http-url.',
+    '  --stdio <command>      Run a stdio MCP server (repeat --stdio-arg for args).',
+    '  --stdio-arg <value>    Append args to the stdio command (repeatable).',
+    '  --env KEY=value        Inject env vars for stdio servers (repeatable).',
+    '  --cwd <path>           Working directory for stdio servers.',
+    '  --name <value>         Override the display name for ad-hoc servers.',
+    '  --description <text>   Override the description for ad-hoc servers.',
+    '  --persist <path>       Write the ad-hoc definition to config/mcporter.json.',
+    '  --yes                  Skip confirmation prompts when persisting.',
+    '',
+    'Display flags:',
+    '  --schema               Show tool schemas when listing servers.',
+    '  --all-parameters       Include optional parameters in tool docs.',
+    '  --json                 Emit a JSON summary instead of text.',
+    '  --timeout <ms>         Override the per-server discovery timeout.',
+    '',
+    'Examples:',
+    '  mcporter list',
+    '  mcporter list linear --schema',
+    '  mcporter list https://mcp.example.com/mcp',
+    '  mcporter list --http-url https://localhost:3333/mcp --schema',
+  ];
+  console.error(lines.join('\n'));
+}
+
 function resolveServerDefinition(
   runtime: Awaited<ReturnType<typeof import('../runtime.js')['createRuntime']>>,
   name: string
