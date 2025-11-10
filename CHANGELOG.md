@@ -7,6 +7,9 @@
 - Keep-alive detection now honors the `lifecycle` config flag/env overrides and also inspects STDIO command signatures, so renaming `chrome-devtools` (or other stateful servers) no longer disables the daemon accidentally.
 - Introduced daemon logging controls (`mcporter daemon start --log|--log-file`, `--log-servers`, `MCPORTER_DAEMON_LOG*` env vars, and per-server `logging.daemon.enabled`). `mcporter daemon status` reports the active log path, and a new `tests/daemon.integration.test.ts` suite keeps the end-to-end flow covered.
 
+### Fixes
+- `mcporter list` (and every CLI entry point) once again treats missing project configs as empty instead of throwing ENOENT, matching the 0.4.x behavior when you run the CLI outside a repo.
+
 ## [0.5.0] - 2025-11-10
 
 ### CLI & runtime
