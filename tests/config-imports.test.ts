@@ -22,6 +22,7 @@ beforeEach(() => {
   process.env.HOME = fakeHomeDir;
   process.env.USERPROFILE = fakeHomeDir;
   process.env.APPDATA = path.join(fakeHomeDir, 'AppData', 'Roaming');
+  process.env.XDG_CONFIG_HOME = path.join(fakeHomeDir, '.config');
   fs.mkdirSync(process.env.APPDATA, { recursive: true });
   const sourceCodex = path.join(FIXTURE_ROOT, '.codex', 'config.toml');
   const targetCodex = path.join(fakeHomeDir, '.codex', 'config.toml');
@@ -60,6 +61,7 @@ afterEach(() => {
   process.env.HOME = undefined;
   process.env.USERPROFILE = undefined;
   process.env.APPDATA = undefined;
+  process.env.XDG_CONFIG_HOME = undefined;
   process.env.OPENCODE_CONFIG = undefined;
   process.env.OPENCODE_CONFIG_DIR = undefined;
   if (fakeHomeDir) {
