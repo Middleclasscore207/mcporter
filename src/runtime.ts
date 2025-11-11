@@ -568,7 +568,11 @@ function raceWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> 
   });
 }
 
-const NON_FATAL_MCP_ERROR_CODES = new Set([ErrorCode.InvalidRequest, ErrorCode.MethodNotFound, ErrorCode.InvalidParams]);
+const NON_FATAL_MCP_ERROR_CODES = new Set([
+  ErrorCode.InvalidRequest,
+  ErrorCode.MethodNotFound,
+  ErrorCode.InvalidParams,
+]);
 
 function shouldResetConnection(error: unknown): boolean {
   if (!error) {

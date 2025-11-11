@@ -1,8 +1,8 @@
+import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { describe, expect, it, vi } from 'vitest';
 import type { ServerDefinition } from '../src/config.js';
 import { createKeepAliveRuntime } from '../src/daemon/runtime-wrapper.js';
 import type { CallOptions, ListToolsOptions, Runtime } from '../src/runtime.js';
-import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 
 class FakeRuntime implements Runtime {
   private readonly definitions: ServerDefinition[];
@@ -113,10 +113,7 @@ describe('createKeepAliveRuntime', () => {
   it('restarts daemon servers after fatal errors and retries the operation', async () => {
     const runtime = new FakeRuntime(definitions);
     const daemon = {
-      callTool: vi
-        .fn()
-        .mockRejectedValueOnce(new Error('transport hung up'))
-        .mockResolvedValueOnce('daemon-call'),
+      callTool: vi.fn().mockRejectedValueOnce(new Error('transport hung up')).mockResolvedValueOnce('daemon-call'),
       closeServer: vi.fn().mockResolvedValue(undefined),
       listTools: vi.fn(),
       listResources: vi.fn(),

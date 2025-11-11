@@ -120,9 +120,7 @@ async function maybeDescribeServer(
   if (tool !== 'help') {
     return false;
   }
-  const tools = await runtime
-    .listTools(server, { includeSchema: false, autoAuthorize: false })
-    .catch(() => undefined);
+  const tools = await runtime.listTools(server, { includeSchema: false, autoAuthorize: false }).catch(() => undefined);
   if (!tools) {
     return false;
   }

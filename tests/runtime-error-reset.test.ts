@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createRuntime } from '../src/runtime.js';
 
 describe('runtime connection resets', () => {
