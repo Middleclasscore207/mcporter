@@ -3,7 +3,8 @@
 ## [Unreleased]
 
 ### CLI & runtime
-- _Nothing yet._
+- Reset cached keep-alive connections whenever STDIO transports hit fatal errors (timeouts, closed pipes, daemon restarts, etc.), so chrome-devtools automatically recovers after you close Chrome instead of requiring `mcporter daemon stop`.
+- Daemon-routed calls now log a restart notice and automatically retry once after closing the stale transport, providing self-healing behavior when Chrome or other keep-alive servers crash mid-call.
 
 ## [0.5.5] - 2025-11-11
 

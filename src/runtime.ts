@@ -4,6 +4,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import type { CallToolRequest, ListResourcesRequest } from '@modelcontextprotocol/sdk/types.js';
+import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { loadServerDefinitions, type ServerDefinition } from './config.js';
 import { resolveEnvValue, withEnvOverrides } from './env.js';
 import { createPrefixedConsoleLogger, type Logger, type LogLevel, resolveLogLevelFromEnv } from './logging.js';
@@ -178,6 +179,9 @@ class McpRuntime implements Runtime {
         inputSchema: options.includeSchema ? tool.inputSchema : undefined,
         outputSchema: options.includeSchema ? tool.outputSchema : undefined,
       }));
+    } catch (error) {
+      await this.resetConnectionOnError(server, error);
+      throw error;
     } finally {
       if (!autoAuthorize) {
         await context.client.close().catch(() => {});
@@ -189,23 +193,33 @@ class McpRuntime implements Runtime {
 
   // callTool executes a tool using the args provided by the caller.
   async callTool(server: string, toolName: string, options: CallOptions = {}): Promise<unknown> {
-    const { client } = await this.connect(server);
-    const params: CallToolRequest['params'] = {
-      name: toolName,
-      arguments: options.args ?? {},
-    };
-    const resultPromise = client.callTool(params);
-    const timeoutMs = normalizeTimeout(options.timeoutMs);
-    if (!timeoutMs) {
-      return resultPromise;
+    try {
+      const { client } = await this.connect(server);
+      const params: CallToolRequest['params'] = {
+        name: toolName,
+        arguments: options.args ?? {},
+      };
+      const resultPromise = client.callTool(params);
+      const timeoutMs = normalizeTimeout(options.timeoutMs);
+      if (!timeoutMs) {
+        return await resultPromise;
+      }
+      return await raceWithTimeout(resultPromise, timeoutMs);
+    } catch (error) {
+      await this.resetConnectionOnError(server, error);
+      throw error;
     }
-    return raceWithTimeout(resultPromise, timeoutMs);
   }
 
   // listResources delegates to the MCP resources/list method with passthrough params.
   async listResources(server: string, options: Partial<ListResourcesRequest['params']> = {}): Promise<unknown> {
-    const { client } = await this.connect(server);
-    return client.listResources(options as ListResourcesRequest['params']);
+    try {
+      const { client } = await this.connect(server);
+      return await client.listResources(options as ListResourcesRequest['params']);
+    } catch (error) {
+      await this.resetConnectionOnError(server, error);
+      throw error;
+    }
   }
 
   // connect lazily instantiates a client context per server and memoizes it.
@@ -266,6 +280,22 @@ class McpRuntime implements Runtime {
       } finally {
         this.clients.delete(name);
       }
+    }
+  }
+
+  private async resetConnectionOnError(server: string, error: unknown): Promise<void> {
+    if (!shouldResetConnection(error)) {
+      return;
+    }
+    const normalized = server.trim();
+    if (!this.clients.has(normalized)) {
+      return;
+    }
+    try {
+      await this.close(normalized);
+    } catch (closeError) {
+      const detail = closeError instanceof Error ? closeError.message : String(closeError);
+      this.logger.warn(`Failed to reset '${normalized}' after error: ${detail}`);
     }
   }
 
@@ -515,8 +545,7 @@ function normalizeTimeout(raw?: number): number | undefined {
 function raceWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
-      // We reject with a Timeout error but leave the keep-alive transport alone; if the
-      // daemon detects the same stall it will restart that MCP server on its own.
+      // Reject with a Timeout error; the caller will decide whether the underlying transport should be reset.
       reject(new Error('Timeout'));
     }, timeoutMs);
     promise.then(
@@ -530,6 +559,18 @@ function raceWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> 
       }
     );
   });
+}
+
+const NON_FATAL_MCP_ERROR_CODES = new Set([ErrorCode.InvalidRequest, ErrorCode.MethodNotFound, ErrorCode.InvalidParams]);
+
+function shouldResetConnection(error: unknown): boolean {
+  if (!error) {
+    return false;
+  }
+  if (error instanceof McpError) {
+    return !NON_FATAL_MCP_ERROR_CODES.has(error.code);
+  }
+  return error instanceof Error;
 }
 
 // createConsoleLogger produces the default runtime logger honoring MCPORTER_LOG_LEVEL.

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ServerDefinition } from '../src/config.js';
 import { createKeepAliveRuntime } from '../src/daemon/runtime-wrapper.js';
 import type { CallOptions, ListToolsOptions, Runtime } from '../src/runtime.js';
+import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 
 class FakeRuntime implements Runtime {
   private readonly definitions: ServerDefinition[];
@@ -107,5 +108,48 @@ describe('createKeepAliveRuntime', () => {
 
     await keepAliveRuntime.close();
     expect(runtime.closeMock).toHaveBeenCalledWith(undefined);
+  });
+
+  it('restarts daemon servers after fatal errors and retries the operation', async () => {
+    const runtime = new FakeRuntime(definitions);
+    const daemon = {
+      callTool: vi
+        .fn()
+        .mockRejectedValueOnce(new Error('transport hung up'))
+        .mockResolvedValueOnce('daemon-call'),
+      closeServer: vi.fn().mockResolvedValue(undefined),
+      listTools: vi.fn(),
+      listResources: vi.fn(),
+    };
+    const keepAliveRuntime = createKeepAliveRuntime(runtime as unknown as Runtime, {
+      daemonClient: daemon as never,
+      keepAliveServers: new Set(['alpha']),
+    });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await expect(keepAliveRuntime.callTool('alpha', 'ping', {})).resolves.toBe('daemon-call');
+    expect(daemon.callTool).toHaveBeenCalledTimes(2);
+    expect(daemon.closeServer).toHaveBeenCalledWith({ server: 'alpha' });
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Restarting 'alpha'"));
+    logSpy.mockRestore();
+  });
+
+  it('does not restart daemon servers for InvalidParams errors', async () => {
+    const runtime = new FakeRuntime(definitions);
+    const error = new McpError(ErrorCode.InvalidParams, 'Tool not found');
+    const daemon = {
+      callTool: vi.fn().mockRejectedValue(error),
+      closeServer: vi.fn().mockResolvedValue(undefined),
+      listTools: vi.fn(),
+      listResources: vi.fn(),
+    };
+    const keepAliveRuntime = createKeepAliveRuntime(runtime as unknown as Runtime, {
+      daemonClient: daemon as never,
+      keepAliveServers: new Set(['alpha']),
+    });
+
+    await expect(keepAliveRuntime.callTool('alpha', 'ping', {})).rejects.toThrow('Tool not found');
+    expect(daemon.callTool).toHaveBeenCalledTimes(1);
+    expect(daemon.closeServer).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,5 @@
 import type { ListResourcesRequest } from '@modelcontextprotocol/sdk/types.js';
+import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import type { ServerDefinition } from '../config.js';
 import { isKeepAliveServer } from '../lifecycle.js';
 import type { CallOptions, ListToolsOptions, Runtime } from '../runtime.js';
@@ -46,30 +47,36 @@ class KeepAliveRuntime implements Runtime {
 
   async listTools(server: string, options?: ListToolsOptions): Promise<Awaited<ReturnType<Runtime['listTools']>>> {
     if (this.shouldUseDaemon(server)) {
-      return (await this.daemon.listTools({
-        server,
-        includeSchema: options?.includeSchema,
-        autoAuthorize: options?.autoAuthorize,
-      })) as Awaited<ReturnType<Runtime['listTools']>>;
+      return (await this.invokeWithRestart(server, 'listTools', () =>
+        this.daemon.listTools({
+          server,
+          includeSchema: options?.includeSchema,
+          autoAuthorize: options?.autoAuthorize,
+        })
+      )) as Awaited<ReturnType<Runtime['listTools']>>;
     }
     return this.base.listTools(server, options);
   }
 
   async callTool(server: string, toolName: string, options?: CallOptions): Promise<unknown> {
     if (this.shouldUseDaemon(server)) {
-      return this.daemon.callTool({
-        server,
-        tool: toolName,
-        args: options?.args,
-        timeoutMs: options?.timeoutMs,
-      });
+      return this.invokeWithRestart(server, 'callTool', () =>
+        this.daemon.callTool({
+          server,
+          tool: toolName,
+          args: options?.args,
+          timeoutMs: options?.timeoutMs,
+        })
+      );
     }
     return this.base.callTool(server, toolName, options);
   }
 
   async listResources(server: string, options?: Partial<ListResourcesRequest['params']>): Promise<unknown> {
     if (this.shouldUseDaemon(server)) {
-      return this.daemon.listResources({ server, params: options ?? {} });
+      return this.invokeWithRestart(server, 'listResources', () =>
+        this.daemon.listResources({ server, params: options ?? {} })
+      );
     }
     return this.base.listResources(server, options);
   }
@@ -93,4 +100,34 @@ class KeepAliveRuntime implements Runtime {
   private shouldUseDaemon(server: string): boolean {
     return this.keepAliveServers.has(server);
   }
+
+  private async invokeWithRestart<T>(server: string, operation: string, action: () => Promise<T>): Promise<T> {
+    try {
+      return await action();
+    } catch (error) {
+      if (!shouldRestartDaemonServer(error)) {
+        throw error;
+      }
+      logDaemonRetry(server, operation, error);
+      await this.daemon.closeServer({ server }).catch(() => {});
+      return action();
+    }
+  }
+}
+
+const NON_FATAL_CODES = new Set([ErrorCode.InvalidRequest, ErrorCode.MethodNotFound, ErrorCode.InvalidParams]);
+
+function shouldRestartDaemonServer(error: unknown): boolean {
+  if (!error) {
+    return false;
+  }
+  if (error instanceof McpError) {
+    return !NON_FATAL_CODES.has(error.code);
+  }
+  return true;
+}
+
+function logDaemonRetry(server: string, operation: string, error: unknown): void {
+  const reason = error instanceof Error ? error.message : String(error);
+  console.log(`[mcporter] Restarting '${server}' before retrying ${operation}: ${reason}`);
 }

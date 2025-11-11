@@ -26,3 +26,5 @@ These undocumented shortcuts are safe for MCP agents to call when they need a qu
 1. Agents wanting prose guidance should run `pnpm mcp call chrome-devtools.help`.
 2. If the server lacks a `help` tool, the command emits a dim hint and then shows the `describe`/`list` output so the agent still learns about the server.
 3. For a guaranteed TypeScript-style summary, skip straight to `mcporter describe chrome-devtools --schema`.
+
+> Note: `chrome-devtools` currently ships without a `help` tool, so step 1 always triggers the fallback and prints the same schema-rich output you would see from `mcporter list`.
