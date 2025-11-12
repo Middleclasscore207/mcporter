@@ -149,7 +149,13 @@ export function parseCallArguments(args: string[]): CallArgsParseResult {
   }
 
   const nextPositional = positional[0];
-  if (!result.tool && nextPositional !== undefined && !nextPositional.includes('=') && !callExpressionProvidedTool) {
+  if (
+    !result.tool &&
+    nextPositional !== undefined &&
+    !nextPositional.includes('=') &&
+    !nextPositional.includes(':') &&
+    !callExpressionProvidedTool
+  ) {
     result.tool = positional.shift();
   }
 
@@ -168,7 +174,7 @@ export function parseCallArguments(args: string[]): CallArgsParseResult {
     }
     index += parsed.consumed;
     const value = coerceValue(parsed.rawValue);
-    if ((parsed.key === 'tool' || parsed.key === 'command') && !result.tool) {
+    if (parsed.key === 'tool' && !result.tool) {
       if (typeof value !== 'string') {
         throw new Error("Argument 'tool' must be a string value.");
       }
@@ -190,10 +196,13 @@ export function parseCallArguments(args: string[]): CallArgsParseResult {
   return result;
 }
 
-function parseKeyValueToken(
-  token: string,
-  nextToken: string | undefined
-): { key: string; rawValue: string; consumed: number } | undefined {
+interface ParsedKeyValueToken {
+  key: string;
+  rawValue: string;
+  consumed: number;
+}
+
+function parseKeyValueToken(token: string, nextToken: string | undefined): ParsedKeyValueToken | undefined {
   const eqIndex = token.indexOf('=');
   if (eqIndex !== -1) {
     const key = token.slice(0, eqIndex);
@@ -217,10 +226,24 @@ function parseKeyValueToken(
     if (nextToken !== undefined) {
       return { key, rawValue: nextToken, consumed: 2 };
     }
-    return undefined;
+    warnMissingNamedArgumentValue(key);
+    return { key, rawValue: '', consumed: 1 };
   }
 
   return undefined;
+}
+
+function warnMissingNamedArgumentValue(key: string): void {
+  const hint =
+    key === 'command' ? `Example: mcporter call iterm-mcp.write_to_terminal --args '{"command":"echo hi"}'` : undefined;
+  const lines = [
+    `[mcporter] Argument '${key}' was provided without a value.`,
+    `Wrap the entire key/value pair in quotes (e.g., 'command: "echo hi"') or use --args with JSON.`,
+  ];
+  if (hint) {
+    lines.push(hint);
+  }
+  console.warn(lines.join(' '));
 }
 
 function extractHttpCallExpression(raw: string): ReturnType<typeof parseCallExpressionFragment> | null {

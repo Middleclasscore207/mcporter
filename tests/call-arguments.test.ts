@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { parseCallArguments } from '../src/cli/call-arguments.js';
 
 describe('parseCallArguments', () => {
@@ -38,5 +38,15 @@ describe('parseCallArguments', () => {
     expect(() => parseCallArguments(['--server', 'linear', 'cursor.list_documents(limit:1)'])).toThrow(
       /Conflicting server names/
     );
+  });
+
+  it('warns when colon-style arguments omit a value', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const parsed = parseCallArguments(['iterm-mcp.write_to_terminal', 'command:']);
+    expect(parsed.args.command).toBe('');
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[mcporter] Argument 'command' was provided without a value.")
+    );
+    warnSpy.mockRestore();
   });
 });
