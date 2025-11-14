@@ -6,6 +6,7 @@
 - _Nothing yet._
 
 ### CLI
+- Added `mcporter daemon restart`, a stop+start convenience that reuses logging flags so agents can bounce the keep-alive daemon with a single command.
 - Added `list_tools` as a hidden shortcut for `mcporter list <server>`, so `chrome-devtools.list_tools` (and similar selectors) print the tool catalog instantly without requiring a real MCP tool.
 - Warn when colon-style arguments omit a value (e.g., `command:`) and suggest quoting/`--args` JSON so agents don’t accidentally send `undefined` to STDIO servers.
 
