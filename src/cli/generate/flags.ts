@@ -1,6 +1,11 @@
 import { splitCommandLine } from '../adhoc-server.js';
 import { expectValue } from '../flag-utils.js';
-import { extractHttpServerTarget, looksLikeHttpUrl, normalizeHttpUrlCandidate, splitHttpToolSelector } from '../http-utils.js';
+import {
+  extractHttpServerTarget,
+  looksLikeHttpUrl,
+  normalizeHttpUrlCandidate,
+  splitHttpToolSelector,
+} from '../http-utils.js';
 import { extractGeneratorFlags } from './flag-parser.js';
 import type { CommandInput } from './types.js';
 
