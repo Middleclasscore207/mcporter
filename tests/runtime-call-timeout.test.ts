@@ -10,13 +10,19 @@ describe('runtime callTool timeouts', () => {
   it('forwards timeout into MCP client request options', async () => {
     const runtime = await createRuntime({ servers: [] });
 
-    const callTool = vi.fn(async (_params, _schema, options?: { timeout?: number; resetTimeoutOnProgress?: boolean; maxTotalTimeout?: number }) => {
-      // Simulate a successful response without timing out.
-      expect(options?.timeout).toBe(456);
-      expect(options?.resetTimeoutOnProgress).toBe(true);
-      expect(options?.maxTotalTimeout).toBe(456);
-      return { ok: true };
-    });
+    const callTool = vi.fn(
+      async (
+        _params,
+        _schema,
+        options?: { timeout?: number; resetTimeoutOnProgress?: boolean; maxTotalTimeout?: number }
+      ) => {
+        // Simulate a successful response without timing out.
+        expect(options?.timeout).toBe(456);
+        expect(options?.resetTimeoutOnProgress).toBe(true);
+        expect(options?.maxTotalTimeout).toBe(456);
+        return { ok: true };
+      }
+    );
 
     type ClientContext = Awaited<ReturnType<typeof runtime.connect>>;
     const fakeContext = {
