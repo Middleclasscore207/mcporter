@@ -44,11 +44,13 @@ export interface CallOptions {
 export interface ListToolsOptions {
   readonly includeSchema?: boolean;
   readonly autoAuthorize?: boolean;
+  readonly allowCachedAuth?: boolean;
 }
 
 interface ConnectOptions {
   readonly maxOAuthAttempts?: number;
   readonly skipCache?: boolean;
+  readonly allowCachedAuth?: boolean;
 }
 
 export interface Runtime {
@@ -152,6 +154,7 @@ class McpRuntime implements Runtime {
     const context = await this.connect(server, {
       maxOAuthAttempts: autoAuthorize ? undefined : 0,
       skipCache: !autoAuthorize,
+      allowCachedAuth: options.allowCachedAuth,
     });
     try {
       const tools: ServerToolInfo[] = [];
@@ -248,6 +251,7 @@ class McpRuntime implements Runtime {
       maxOAuthAttempts: options.maxOAuthAttempts,
       oauthTimeoutMs: this.oauthTimeoutMs ?? OAUTH_CODE_TIMEOUT_MS,
       onDefinitionPromoted: (promoted) => this.definitions.set(promoted.name, promoted),
+      allowCachedAuth: options.allowCachedAuth,
     });
 
     if (useCache) {

@@ -1,7 +1,9 @@
 # mcporter Changelog
 
 ## [Unreleased]
-- Nothing yet.
+### CLI
+- `mcporter list` now uses cached OAuth access tokens (if present) for the all-servers view without opening browser windows, so previously authorized servers no longer show spurious “auth required” in non-interactive listings.
+- `pnpm test --filter <pattern>` now works by translating to a Vitest file pattern, avoiding the prior “Unknown option --filter” error.
 
 ## [0.6.3] - 2025-11-22
 ### Runtime & CLI

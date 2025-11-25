@@ -181,6 +181,29 @@ describe('CLI list classification and routing', () => {
     expect(listTools).toHaveBeenCalledWith('shadcn', expect.anything());
   });
 
+  it('enables cached OAuth when listing all servers', async () => {
+    const { handleList } = await cliModulePromise;
+    const definition: ServerDefinition = {
+      name: 'linear',
+      description: 'Linear MCP',
+      auth: 'oauth',
+      command: { kind: 'http', url: new URL('https://mcp.linear.app/sse') },
+      source: { kind: 'local', path: '/tmp/config.json' },
+    };
+    const listTools = vi.fn().mockResolvedValue([{ name: 'ok' }]);
+    const runtime = {
+      getDefinitions: () => [definition],
+      listTools,
+    } as unknown as Awaited<ReturnType<typeof import('../src/runtime.js')['createRuntime']>>;
+
+    await handleList(runtime, []);
+
+    expect(listTools).toHaveBeenCalledWith('linear', {
+      autoAuthorize: false,
+      allowCachedAuth: true,
+    });
+  });
+
   it('registers an ad-hoc HTTP server when URL is provided', async () => {
     const { handleList } = await cliModulePromise;
     const definitions = new Map<string, ServerDefinition>();

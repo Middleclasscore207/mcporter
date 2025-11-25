@@ -153,7 +153,7 @@ export async function handleList(
           const startedAt = Date.now();
           try {
             const tools = await withTimeout(
-              runtime.listTools(server.name, { autoAuthorize: false }),
+              runtime.listTools(server.name, { autoAuthorize: false, allowCachedAuth: true }),
               perServerTimeoutMs
             );
             return {

@@ -1,3 +1,6 @@
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -20,6 +23,25 @@ function attachStdioTraceLogging(_transport: StdioClientTransport, _label?: stri
   // so runtime callers can opt-in without sprinkling conditional checks everywhere.
 }
 
+async function loadCachedAccessToken(definition: ServerDefinition): Promise<string | undefined> {
+  const tokenDir = definition.tokenCacheDir ?? path.join(os.homedir(), '.mcporter', definition.name);
+  const tokensPath = path.join(tokenDir, 'tokens.json');
+  try {
+    const buffer = await fs.readFile(tokensPath, 'utf8');
+    const parsed = JSON.parse(buffer);
+    const token = parsed?.access_token;
+    if (typeof token === 'string' && token.trim().length > 0) {
+      return token;
+    }
+    return undefined;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
 export interface ClientContext {
   readonly client: Client;
   readonly transport: Transport & { close(): Promise<void> };
@@ -31,6 +53,7 @@ export interface CreateClientContextOptions {
   readonly maxOAuthAttempts?: number;
   readonly oauthTimeoutMs?: number;
   readonly onDefinitionPromoted?: (definition: ServerDefinition) => void;
+  readonly allowCachedAuth?: boolean;
 }
 
 export async function createClientContext(
@@ -41,6 +64,38 @@ export async function createClientContext(
 ): Promise<ClientContext> {
   const client = new Client(clientInfo);
   let activeDefinition = definition;
+
+  if (
+    options.allowCachedAuth &&
+    activeDefinition.auth === 'oauth' &&
+    activeDefinition.command.kind === 'http'
+  ) {
+    try {
+      const cached = await loadCachedAccessToken(activeDefinition);
+      if (cached) {
+        const existingHeaders = activeDefinition.command.headers ?? {};
+        if (!('Authorization' in existingHeaders)) {
+          activeDefinition = {
+            ...activeDefinition,
+            command: {
+              ...activeDefinition.command,
+              headers: {
+                ...existingHeaders,
+                Authorization: `Bearer ${cached}`,
+              },
+            },
+          };
+          logger.debug?.(`Using cached OAuth access token for '${activeDefinition.name}' (non-interactive).`);
+        }
+      }
+    } catch (error) {
+      logger.debug?.(
+        `Failed to read cached OAuth token for '${activeDefinition.name}': ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
 
   return withEnvOverrides(activeDefinition.env, async () => {
     if (activeDefinition.command.kind === 'stdio') {
