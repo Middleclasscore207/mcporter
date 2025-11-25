@@ -402,9 +402,6 @@ CI runs the same trio via GitHub Actions.
 - CodexBar 🟦🟩 Keep Codex token windows visible in your macOS menu bar. <https://codexbar.app>.
 - Trimmy ✂️ “Paste once, run once.” Flatten multi-line shell snippets so they paste and run. <https://trimmy.app>.
 - MCP spec ✨ <https://github.com/modelcontextprotocol/specification>
-- Supabase MCP server for Claude 🧠 <https://github.com/supabase-community/supabase-mcp-server>
-- Vercel MCP server for Claude ▲ <https://github.com/vercel/ai/tree/main/packages/ai-sdk-experimental/mcp>
-- `mcp-proxy` for Claude Desktop 🔌 <https://github.com/modelcontextprotocol/claude-code-proxy>
 
 ## Debug Hanging Servers Quickly
 
